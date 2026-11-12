@@ -104,8 +104,6 @@ h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,7vw,40px);lin
 .leaflet-popup-content{font:14px/1.4 var(--body)}
 .leaflet-popup-content b{font-size:15px}
 .popbtn{margin-top:6px;font:600 13px var(--body);padding:6px 10px;border-radius:6px;border:0;background:#0d7482;color:#fff;cursor:pointer}
-.prep ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px}
-.prep a{color:var(--accent)}
 .hero{display:grid;grid-template-columns:1fr auto;gap:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
 .hero-main{min-width:0;display:flex;flex-direction:column;gap:12px}
 .k{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
@@ -304,15 +302,6 @@ footer a{color:var(--accent)}
   </div>
   </div>
 
-  <section class="card prep" aria-label="Be prepared">
-    <div class="k">Be prepared</div>
-    <ul>
-      <li>Sign up for local emergency alerts: <a href="https://rdn.bc.ca/emergency-alerts" target="_blank" rel="noopener">Regional District of Nanaimo</a> · <a href="https://www.comoxvalleyrd.ca/node/8722" target="_blank" rel="noopener">Comox Valley Regional District</a> · <a href="https://campbellriver.ca/emergencies" target="_blank" rel="noopener">Campbell River (Alertable)</a>. Elsewhere, check your regional district’s website.</li>
-      <li><a href="https://bcrfc.env.gov.bc.ca/warnings/index.htm" target="_blank" rel="noopener">BC River Forecast Centre advisories</a></li>
-      <li><a href="https://www.emergencyinfobc.gov.bc.ca/" target="_blank" rel="noopener">EmergencyInfoBC</a> for evacuation orders and official updates</li>
-      <li><a href="https://www.drivebc.ca/" target="_blank" rel="noopener">DriveBC</a> for road closures and flooding on highways</li>
-    </ul>
-  </section>
 
   <footer>
     <span>Readings every 5 minutes in Pacific Standard Time, refreshed automatically while the app is open. Gauges report with up to a 2 hour delay. Lake and reservoir gauges measure water level only, and reservoir levels are controlled by BC Hydro.</span>
@@ -1057,7 +1046,7 @@ footer a{color:var(--accent)}
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
   // Visitor counting (optional): set this to your GoatCounter code, e.g. 'islandrivers', to switch it on.
-  const GOATCOUNTER_CODE = '';
+  const GOATCOUNTER_CODE = 'island-rivers';
   if (GOATCOUNTER_CODE && /^[a-z0-9-]+$/.test(GOATCOUNTER_CODE)) { const g = document.createElement('script'); g.async = true; g.src = 'https://gc.zgo.at/count.js'; g.dataset.goatcounter = 'https://'+GOATCOUNTER_CODE+'.goatcounter.com/count'; document.head.appendChild(g); }
 
   // start: link (#id) > first bookmark > last viewed > Englishman River
