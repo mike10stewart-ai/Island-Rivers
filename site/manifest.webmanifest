@@ -1,0 +1,15 @@
+{
+  "name": "Island Rivers",
+  "short_name": "River",
+  "description": "Live water levels and flows for rivers, creeks and lakes on Vancouver Island.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c1517",
+  "theme_color": "#0d7482",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
