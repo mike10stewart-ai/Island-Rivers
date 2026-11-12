@@ -100,6 +100,7 @@ h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,7vw,40px);lin
 .map{height:min(68vh,560px);border-radius:12px;border:1px solid var(--line);overflow:hidden;background:var(--panel)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;font-family:var(--mono);color:var(--muted)}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
+@media (prefers-color-scheme:dark){.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}}
 .leaflet-popup-content{font:14px/1.4 var(--body)}
 .leaflet-popup-content b{font-size:15px}
 .popbtn{margin-top:6px;font:600 13px var(--body);padding:6px 10px;border-radius:6px;border:0;background:#0d7482;color:#fff;cursor:pointer}
@@ -170,7 +171,7 @@ footer a{color:var(--accent)}
     <div class="adv-none" id="mapMsg" hidden></div>
     <div id="map" class="map" role="application" aria-label="Map of Vancouver Island river gauges"></div>
     <div class="legend" id="legend"></div>
-    <div class="fineprint">Each dot is a gauge, coloured by how unusual its flow is (return period from the BC River Forecast Centre). Shaded areas have an active advisory. Tap a dot to open that river.</div>
+    <div class="fineprint">Each dot is a gauge, coloured by how unusual its flow is (return period from the BC River Forecast Centre). Tap a dot to open that river and see any active advisory.</div>
   </section>
 
   <div id="riverView" style="display:flex;flex-direction:column;gap:16px">
@@ -316,7 +317,7 @@ footer a{color:var(--accent)}
   <footer>
     <span>Readings every 5 minutes in Pacific Standard Time, refreshed automatically while the app is open. Gauges report with up to a 2 hour delay. Lake and reservoir gauges measure water level only, and reservoir levels are controlled by BC Hydro.</span>
     <span>Marks and bookmarks are saved on this device only. The Englishman River bench landmark (about 2.45 m, 134 m³/s) is estimated from the December 2025 high water, when the river came up to just below the bench. Marks are a guide, not official flood levels.</span>
-    <span>Rain: Environment Canada GEM model via Open-Meteo. Tides: Fisheries and Oceans Canada predictions. Map: © OpenStreetMap contributors, © CARTO.</span>
+    <span>Rain: Environment Canada GEM model via Open-Meteo. Tides: Fisheries and Oceans Canada predictions. Map: © OpenStreetMap contributors.</span>
     <span>Advisories, return periods and 5-day forecasts: BC River Forecast Centre. Typical and record highs: Environment Canada yearly peak records (typical = median of yearly peaks).</span>
     <span>Data: Environment and Climate Change Canada, Water Survey of Canada. Provisional real-time data, subject to revision. <a id="official" href="https://wateroffice.ec.gc.ca/report/real_time_e.html?stn=08HB002" target="_blank" rel="noopener">Official station page</a></span>
   </footer>
@@ -732,7 +733,7 @@ footer a{color:var(--accent)}
     btn.disabled = false; renderAlerts();
   });
 
-  // ---------- island map (Leaflet + CARTO tiles, loaded on first open) ----------
+  // ---------- island map (Leaflet + OpenStreetMap tiles, loaded on first open) ----------
   const RP_COLORS = ['#8fbfb2','#a9cf6a','#f2c84b','#f39a3d','#e8622c','#c9302c','#8e1b5c','#4b0d3a'];
   const RP_LABELS = ['Under 1-year','1 to 2-year','2 to 5-year','5 to 10-year','10 to 20-year','20 to 50-year','50 to 100-year','100-year +'];
   const ADV_COLORS = { 2:'#e0b400', 3:'#e8731a', 4:'#c9302c' };
@@ -760,8 +761,7 @@ footer a{color:var(--accent)}
     const [coords, now, fc, adv] = await Promise.all([
       allCoords(),
       agoQuery('StationInformation', { where: "Station_ID like '08H%'", outFields:'Station_ID,Return_Period,Current_Reading_' }).catch(()=>null),
-      agoQuery('coffee_MapHub_forecast', { where: "Station_ID like '08H%'", outFields:'Station_ID,ReturnPeriodAve,Forecast_average_in_5_days,Issued_at' }).catch(()=>null),
-      getJSON(AGO+'BC_Flood_Advisory_and_Warning_Notifications_(Public_View)/FeatureServer/0/query?'+new URLSearchParams({ where:'Advisory>=2', outFields:'Advisory,Major_Basin,Comments', returnGeometry:'true', outSR:'4326', maxAllowableOffset:'0.01', geometryPrecision:'4', f:'geojson' })).catch(()=>null)
+      agoQuery('coffee_MapHub_forecast', { where: "Station_ID like '08H%'", outFields:'Station_ID,ReturnPeriodAve,Forecast_average_in_5_days,Issued_at' }).catch(()=>null)
     ]);
     const byNow = {}, byFc = {}; let issued = '';
     ((now&&now.features)||[]).forEach(f=>{ byNow[f.attributes.Station_ID] = f.attributes; });
@@ -786,17 +786,16 @@ footer a{color:var(--accent)}
       m.bindPopup('<b>'+esc(st.name)+'</b><br>'+(k>=0 ? esc(RP_LABELS[k])+' flow'+(mapMode==='fc'?' (forecast)':'')+'<br>' : '')+detail+'<br><button class="popbtn" data-open="'+st.id+'">Open river</button>');
       m.addTo(markerLayer);
     });
-    $('legend').innerHTML = RP_LABELS.map((l,i)=>'<span><i style="background:'+RP_COLORS[i]+'"></i>'+l+'</span>').join('')+'<span><i style="background:#b8c2c0"></i>No data</span>'+Object.entries(ADV_COLORS).map(([k,c])=>'<span><i style="background:'+c+';border-radius:2px;opacity:.6"></i>'+({2:'Streamflow advisory',3:'Flood watch',4:'Flood warning'})[k]+'</span>').join('');
+    $('legend').innerHTML = RP_LABELS.map((l,i)=>'<span><i style="background:'+RP_COLORS[i]+'"></i>'+l+'</span>').join('')+'<span><i style="background:#b8c2c0"></i>No data</span>';
     $('mapStamp').textContent = mapMode==='fc' ? (mapData.issued ? 'Forecast issued '+mapData.issued : '') : 'Updated '+new Date(mapData.at).toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'});
-    const miss = []; if (!mapData.ok.now && mapMode==='now') miss.push('current flows'); if (!mapData.ok.fc && mapMode==='fc') miss.push('forecasts'); if (!mapData.ok.adv) miss.push('advisory areas');
+    const miss = []; if (!mapData.ok.now && mapMode==='now') miss.push('current flows'); if (!mapData.ok.fc && mapMode==='fc') miss.push('forecasts'); 
     $('mapMsg').hidden = !miss.length; $('mapMsg').textContent = miss.length ? 'Couldn’t load '+miss.join(' or ')+' just now.' : '';
   }
   async function openMap(){
     try { await loadLeaflet(); } catch(e){ $('mapMsg').hidden=false; $('mapMsg').textContent='The map couldn’t load. Check your connection.'; return; }
     if (!MAP){
       MAP = L.map('map', { zoomControl: true, attributionControl: true }).setView([49.65, -125.6], 7);
-      const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/'+(dark?'dark_all':'light_all')+'/{z}/{x}/{y}{r}.png', { maxZoom: 13, subdomains: 'abcd', attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>' }).addTo(MAP);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 15, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' }).addTo(MAP);
       MAP.on('popupopen', e => { const b = e.popup.getElement().querySelector('[data-open]'); if (b) b.addEventListener('click', ()=>{ setView('river'); selectStation(b.dataset.open, true); }); });
     }
     setTimeout(()=>MAP.invalidateSize(), 50);
@@ -1058,7 +1057,7 @@ footer a{color:var(--accent)}
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
   // Visitor counting (optional): set this to your GoatCounter code, e.g. 'islandrivers', to switch it on.
-  const GOATCOUNTER_CODE = 'island-rivers';
+  const GOATCOUNTER_CODE = '';
   if (GOATCOUNTER_CODE && /^[a-z0-9-]+$/.test(GOATCOUNTER_CODE)) { const g = document.createElement('script'); g.async = true; g.src = 'https://gc.zgo.at/count.js'; g.dataset.goatcounter = 'https://'+GOATCOUNTER_CODE+'.goatcounter.com/count'; document.head.appendChild(g); }
 
   // start: link (#id) > first bookmark > last viewed > Englishman River
