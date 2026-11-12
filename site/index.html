@@ -1058,7 +1058,7 @@ footer a{color:var(--accent)}
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
   // Visitor counting (optional): set this to your GoatCounter code, e.g. 'islandrivers', to switch it on.
-  const GOATCOUNTER_CODE = '';
+  const GOATCOUNTER_CODE = 'island-rivers';
   if (GOATCOUNTER_CODE && /^[a-z0-9-]+$/.test(GOATCOUNTER_CODE)) { const g = document.createElement('script'); g.async = true; g.src = 'https://gc.zgo.at/count.js'; g.dataset.goatcounter = 'https://'+GOATCOUNTER_CODE+'.goatcounter.com/count'; document.head.appendChild(g); }
 
   // start: link (#id) > first bookmark > last viewed > Englishman River
