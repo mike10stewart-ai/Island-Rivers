@@ -1,0 +1,1074 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Island Rivers</title>
+<meta name="description" content="Live water levels and flows for 60 rivers, creeks and lakes on Vancouver Island, from Environment Canada gauges.">
+<meta name="theme-color" content="#eef3f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c1517" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="River">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: river picker + bookmark first, then "distance to my mark", stage + trend beside a staff gauge, hydrograph, period stats. */
+:root{
+  --bg:#eef3f2; --panel:#ffffff; --fg:#12201f; --muted:#5b6d6b; --line:#d3dedc; --grid:#e3ebe9;
+  --accent:#0d7482; --accent-soft:rgba(13,116,130,.14); --water:#2a8fa0;
+  --rise:#b45f0b; --rise-bg:#fbeedd; --fall:#2d7a4f; --fall-bg:#e2f2e8; --steady:#5b6d6b; --steady-bg:#e7eceb;
+  --bench:#7a4a1f; --bench-bg:#f3e8dc; --danger:#b3261e; --danger-bg:#fbe3e1; --star:#c98a06;
+  --a2:#6b5200; --a2-bg:#fff1bf; --a3:#8a3c00; --a3-bg:#ffdcc2; --a4:#8e1b14; --a4-bg:#fbd0cc; --hist:#6b5ca5;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0c1517; --panel:#131f22; --fg:#e4eeec; --muted:#8fa3a1; --line:#25363a; --grid:#1c2b2e;
+  --accent:#4cc3d1; --accent-soft:rgba(76,195,209,.16); --water:#2f9fb0;
+  --rise:#f0a54a; --rise-bg:#3a2a14; --fall:#6fcf97; --fall-bg:#16301f; --steady:#a3b4b2; --steady-bg:#1f2c2f;
+  --bench:#d9a066; --bench-bg:#2e2216; --danger:#ff8a80; --danger-bg:#3a1714; --star:#f5c04a;
+  --a2:#f3d36b; --a2-bg:#332a0c; --a3:#ffb27a; --a3-bg:#3a2210; --a4:#ff9a90; --a4-bg:#3f1512; --hist:#b3a6ef;
+  color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:980px;margin:0 auto;padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(32px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,7vw,40px);line-height:1.05;margin:2px 0 0;text-wrap:balance;letter-spacing:.01em}
+.picker{display:flex;gap:8px;align-items:stretch}
+.picker select{flex:1;min-width:0;font:600 17px var(--body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 36px 10px 12px;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px;background-repeat:no-repeat;min-height:46px}
+.star{flex:none;width:52px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--muted);font-size:24px;line-height:1;cursor:pointer}
+.star[aria-pressed="true"]{color:var(--star);border-color:var(--star)}
+.titlebar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:6px 16px}
+.fresh{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right}
+.fresh b{color:var(--fg);font-weight:500}
+.stale{color:var(--rise)}
+.mark-card{display:flex;flex-direction:column;gap:10px;background:var(--bench-bg);color:var(--bench);border-radius:12px;padding:16px 18px}
+.mark-card.over{background:var(--danger-bg);color:var(--danger)}
+.mark-card.none{background:var(--panel);color:var(--fg);border:1px dashed var(--line)}
+.mark-head{font-family:var(--display);font-weight:700;font-size:clamp(28px,8vw,44px);line-height:1;letter-spacing:.005em}
+.mark-card.none .mark-head{font-size:24px}
+.mark-sub{font-size:14px;color:var(--fg);opacity:.9}
+.meter{position:relative;height:12px;border-radius:999px;background:var(--panel);overflow:hidden;border:1px solid var(--line)}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:currentColor;border-radius:999px;transition:width .6s ease}
+.meter-scale{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.mark-edit{display:flex;flex-wrap:wrap;gap:8px;align-items:end;color:var(--fg)}
+.mark-edit label{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.mark-edit input{font:500 15px var(--body);padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg);min-height:40px}
+#markName{width:170px} #markLevel{width:110px;font-family:var(--mono)}
+.linkbtn{background:none;border:0;padding:0;font:500 14px var(--body);color:inherit;text-decoration:underline;cursor:pointer;width:fit-content}
+.adv{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-radius:12px;font-size:14px}
+.adv.l2{background:var(--a2-bg);color:var(--a2)} .adv.l3{background:var(--a3-bg);color:var(--a3)} .adv.l4{background:var(--a4-bg);color:var(--a4)}
+.adv b{font-family:var(--display);font-size:22px;letter-spacing:.03em;text-transform:uppercase;line-height:1.1}
+.adv span{color:var(--fg)} .adv a{color:inherit;font-weight:600}
+.adv-none{font-size:13px;color:var(--muted);font-family:var(--mono)}
+.fc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.fc-head{font-family:var(--display);font-weight:700;font-size:clamp(24px,6.5vw,34px);line-height:1.05}
+.fc-sub{font-size:14px}
+.fc-sub a{color:var(--accent)}
+.chip{display:inline-block;font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:999px;background:var(--steady-bg);color:var(--fg);margin-right:4px;white-space:nowrap}
+.chip.hot{background:var(--a3-bg);color:var(--a3)}
+.fc-mark{font-weight:600}
+.hist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border-radius:8px;overflow:hidden;margin-top:4px}
+.hist div{background:var(--panel);padding:8px 10px;min-width:0}
+.hist .v{font-family:var(--display);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+.hist .n{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.fineprint{font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.tabs button{flex:1;font:600 15px var(--body);padding:10px 12px;border:0;background:transparent;color:var(--muted);cursor:pointer;min-height:44px}
+.tabs button+button{border-left:1px solid var(--line)}
+.tabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.trio .v{font-family:var(--display);font-weight:600;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
+.trio .n{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.rain-chart{width:100%;height:90px;display:block}
+.tide-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.tide{border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.tide b{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums}
+.tide.peak{border-color:var(--a3);background:var(--a3-bg)}
+.tide .n{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.map{height:min(68vh,560px);border-radius:12px;border:1px solid var(--line);overflow:hidden;background:var(--panel)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;font-family:var(--mono);color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
+@media (prefers-color-scheme:dark){.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.9) contrast(.9)}}
+.leaflet-popup-content{font:14px/1.4 var(--body)}
+.leaflet-popup-content b{font-size:15px}
+.popbtn{margin-top:6px;font:600 13px var(--body);padding:6px 10px;border-radius:6px;border:0;background:#0d7482;color:#fff;cursor:pointer}
+.prep ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.prep a{color:var(--accent)}
+.hero{display:grid;grid-template-columns:1fr auto;gap:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.hero-main{min-width:0;display:flex;flex-direction:column;gap:12px}
+.k{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.stage{font-family:var(--display);font-weight:600;font-size:clamp(56px,16vw,100px);line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.stage.long{font-size:clamp(44px,12vw,80px)}
+.stage small{font-size:.38em;font-weight:500;color:var(--muted);margin-left:6px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:.03em;text-transform:uppercase;padding:3px 12px 3px 10px;border-radius:999px;width:fit-content}
+.pill.rise{color:var(--rise);background:var(--rise-bg)} .pill.fall{color:var(--fall);background:var(--fall-bg)} .pill.steady{color:var(--steady);background:var(--steady-bg)}
+.pill .rate{font-family:var(--mono);font-size:13px;font-weight:500;text-transform:none;letter-spacing:0}
+.subs{display:flex;flex-wrap:wrap;gap:10px 26px}
+.sub{display:flex;flex-direction:column}
+.sub .v{font-family:var(--display);font-weight:600;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
+.sub .v small{font-size:.6em;color:var(--muted);font-weight:500;margin-left:3px}
+.gauge{width:92px;height:100%;min-height:220px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 14px 8px}
+.toolbar{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-bottom:8px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:500 13px var(--mono);background:transparent;color:var(--muted);border:0;padding:8px 11px;cursor:pointer;min-height:36px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chart-box{position:relative;width:100%;height:300px}
+.chart-box svg{display:block;width:100%;height:100%;touch-action:pan-y}
+.tip{position:absolute;pointer-events:none;background:var(--fg);color:var(--bg);font:12px/1.4 var(--mono);padding:6px 8px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-100%);z-index:2}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stat{background:var(--panel);padding:12px 14px;min-width:0}
+.stat .v{font-family:var(--display);font-weight:600;font-size:24px;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat .n{font-size:12px;color:var(--muted);font-family:var(--mono)}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.btn{font:500 14px var(--body);padding:9px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--fg);cursor:pointer;min-height:40px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--panel)}
+.msg{padding:12px 14px;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:14px}
+.install{display:flex;gap:10px;align-items:flex-start;background:var(--accent-soft);color:var(--fg);border-radius:10px;padding:12px 14px;font-size:14px}
+.install button{margin-left:auto;background:none;border:0;color:var(--muted);font:500 13px var(--mono);cursor:pointer;padding:2px 4px}
+footer{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+footer a{color:var(--accent)}
+@media (max-width:620px){
+  .hero{grid-template-columns:1fr 62px;padding:16px}
+  .gauge{width:62px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .chart-box{height:240px}
+  .fresh{text-align:left}
+}
+@media (prefers-reduced-motion:reduce){.meter i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="tabs" role="tablist" aria-label="View">
+    <button id="tab-river" role="tab" data-view="river" aria-selected="true">River</button>
+    <button id="tab-map" role="tab" data-view="map" aria-selected="false">Island map</button>
+  </nav>
+
+  <section id="mapView" hidden aria-label="Island map" style="display:flex;flex-direction:column;gap:10px">
+    <div class="toolbar" style="margin:0">
+      <div class="seg" role="group" aria-label="Map shows">
+        <button data-mm="now" aria-pressed="true">Flow now</button>
+        <button data-mm="fc" aria-pressed="false">Next 5 days</button>
+      </div>
+      <span class="fineprint" id="mapStamp"></span>
+    </div>
+    <div class="adv-none" id="mapMsg" hidden></div>
+    <div id="map" class="map" role="application" aria-label="Map of Vancouver Island river gauges"></div>
+    <div class="legend" id="legend"></div>
+    <div class="fineprint">Each dot is a gauge, coloured by how unusual its flow is (return period from the BC River Forecast Centre). Shaded areas have an active advisory. Tap a dot to open that river.</div>
+  </section>
+
+  <div id="riverView" style="display:flex;flex-direction:column;gap:16px">
+  <div class="picker">
+    <select id="river" aria-label="Choose a river"></select>
+    <button class="star" id="star" type="button" aria-pressed="false" aria-label="Bookmark this river" title="Bookmark this river">☆</button>
+  </div>
+
+  <div class="titlebar">
+    <div>
+      <div class="eyebrow" id="eyebrow">Vancouver Island</div>
+      <h1 id="title">Loading…</h1>
+    </div>
+    <div class="fresh" id="fresh">Loading readings…</div>
+  </div>
+
+  <div class="install" id="install" hidden>
+    <span>Install this on your phone: tap <b>Share</b> then <b>Add to Home Screen</b>.</span>
+    <button type="button" id="installClose" aria-label="Dismiss">Close</button>
+  </div>
+
+  <div class="msg" id="msg" hidden></div>
+
+  <section class="adv" id="adv" hidden aria-live="polite">
+    <b id="advLevel"></b>
+    <span id="advText"></span>
+    <a id="advLink" href="https://bcrfc.env.gov.bc.ca/warnings/index.htm" target="_blank" rel="noopener">Read the River Forecast Centre bulletin</a>
+  </section>
+  <div class="adv-none" id="advNone" hidden></div>
+
+  <section class="fc" id="fc" aria-label="Five day outlook">
+    <div class="k">Next 5 days · BC River Forecast Centre model</div>
+    <div class="fc-head" id="fcHead">Loading forecast…</div>
+    <div class="fc-sub" id="fcSub"></div>
+    <div class="fc-sub fc-mark" id="fcMark" hidden></div>
+    <div class="hist" id="hist" hidden>
+      <div><div class="k">Typical yearly high</div><div class="v" id="hTyp">–</div><div class="n" id="hTypN">&nbsp;</div></div>
+      <div><div class="k">Record high</div><div class="v" id="hRec">–</div><div class="n" id="hRecN">&nbsp;</div></div>
+    </div>
+    <div class="fineprint" id="fcFine">Forecasts are model guidance and can be off in either direction. The Forecast Centre’s return periods and Environment Canada’s yearly peak records are calculated differently, so they won’t always agree. Follow official advisories and local emergency instructions.</div>
+  </section>
+
+  <section class="card" id="rainCard" aria-label="Rain">
+    <div class="k">Rain near the gauge · Environment Canada GEM model</div>
+    <div class="trio">
+      <div><div class="v" id="rPast">–</div><div class="n">last 24 h</div></div>
+      <div><div class="v" id="rNext24">–</div><div class="n">next 24 h</div></div>
+      <div><div class="v" id="rNext48">–</div><div class="n">next 48 h</div></div>
+    </div>
+    <svg id="rainChart" class="rain-chart" role="img" aria-label="Hourly rain, past 24 hours and next 48 hours"></svg>
+    <div class="fineprint" id="rainFine">Modelled rain at the gauge location. Mountains upstream usually get more.</div>
+  </section>
+
+  <section class="card" id="tideCard" hidden aria-label="Tides">
+    <div class="k">Tides at <span id="tideStn">–</span> · Fisheries and Oceans Canada</div>
+    <div class="tide-list" id="tideList"></div>
+    <div class="fineprint">The lower river backs up most when a high tide meets high flow. These are predicted tides; storms and low pressure can push water higher.</div>
+  </section>
+
+  <section class="mark-card" id="markCard" aria-label="Distance to your mark">
+    <div class="k" style="color:inherit;opacity:.8" id="markLabel">Your mark</div>
+    <div class="mark-head" id="markHead">–</div>
+    <div id="markMeterWrap">
+      <div class="meter" aria-hidden="true"><i id="markBar" style="width:0"></i></div>
+      <div class="meter-scale" style="margin-top:6px"><span id="markLow">–</span><span id="markHigh">–</span></div>
+    </div>
+    <div class="mark-sub" id="markSub"></div>
+    <button class="linkbtn" id="markEditBtn" type="button">Change mark</button>
+    <form class="mark-edit" id="markForm" hidden>
+      <label for="markName">Name it<input id="markName" type="text" maxlength="40" placeholder="e.g. the bench"></label>
+      <label for="markLevel">Level (m)<input id="markLevel" type="number" step="0.01" inputmode="decimal"></label>
+      <button class="btn" type="button" id="markUseNow">Use current level</button>
+      <button class="btn primary" type="submit">Save</button>
+      <button class="btn" type="button" id="markRemove">Remove</button>
+      <button class="btn" type="button" id="markCancel">Cancel</button>
+    </form>
+  </section>
+
+  <section class="hero" aria-label="Current conditions">
+    <div class="hero-main">
+      <div>
+        <div class="k">Water level</div>
+        <div class="stage" id="stage">–<small>m</small></div>
+      </div>
+      <div class="pill steady" id="trend">Loading</div>
+      <div class="fineprint" id="tidalNote" hidden>This gauge is tide-affected: its level rises and falls with the tide, so the short-term trend mostly shows the tide.</div>
+      <div class="subs">
+        <div class="sub" id="flowWrap"><span class="k">Flow</span><span class="v" id="flow">–<small>m³/s</small></span></div>
+        <div class="sub"><span class="k">Change 6 h</span><span class="v" id="d6">–</span></div>
+        <div class="sub"><span class="k">Change 24 h</span><span class="v" id="d24">–</span></div>
+      </div>
+    </div>
+    <svg class="gauge" id="gauge" viewBox="0 0 96 260" preserveAspectRatio="none" role="img" aria-label="Staff gauge showing the current level"></svg>
+  </section>
+
+  <section class="panel" aria-label="Hydrograph">
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Measure">
+        <button id="m-level" data-m="level" aria-pressed="true">Level m</button>
+        <button id="m-flow" data-m="flow" aria-pressed="false">Flow m³/s</button>
+      </div>
+      <div class="seg" role="group" aria-label="Time range">
+        <button id="r-1" data-r="1" aria-pressed="false">24h</button>
+        <button id="r-3" data-r="3" aria-pressed="true">3d</button>
+        <button id="r-7" data-r="7" aria-pressed="false">7d</button>
+        <button id="r-30" data-r="30" aria-pressed="false">30d</button>
+      </div>
+    </div>
+    <div class="chart-box" id="chartBox"><svg id="chart" role="img" aria-label="Water level over time"></svg><div class="tip" id="tip" hidden></div></div>
+    <div class="fineprint" id="offchart" hidden style="padding:4px 0 6px"></div>
+  </section>
+
+  <section class="stats" aria-label="Period summary">
+    <div class="stat"><div class="k">Peak in range</div><div class="v" id="sPeak">–</div><div class="n" id="sPeakT">&nbsp;</div></div>
+    <div class="stat"><div class="k">Low in range</div><div class="v" id="sLow">–</div><div class="n" id="sLowT">&nbsp;</div></div>
+    <div class="stat"><div class="k">Peak flow</div><div class="v" id="sFlow">–</div><div class="n" id="sFlowT">&nbsp;</div></div>
+    <div class="stat"><div class="k">Fastest rise</div><div class="v" id="sRate">–</div><div class="n" id="sRateT">&nbsp;</div></div>
+  </section>
+
+  <section class="card" id="alertCard" hidden aria-label="Alerts">
+    <div class="k">Alerts for this river</div>
+    <div id="alertText">Get a notification when the River Forecast Centre issues or eases an advisory here, or when the water reaches your mark.</div>
+    <div class="actions"><button class="btn primary" id="alertBtn" type="button">Turn on alerts</button></div>
+    <div class="fineprint" id="alertFine"></div>
+  </section>
+
+  <div class="actions">
+    <button class="btn" id="refresh" type="button">Refresh now</button>
+    <button class="btn" id="share" type="button">Share this river</button>
+  </div>
+  </div>
+
+  <section class="card prep" aria-label="Be prepared">
+    <div class="k">Be prepared</div>
+    <ul>
+      <li>Sign up for local emergency alerts: <a href="https://rdn.bc.ca/emergency-alerts" target="_blank" rel="noopener">Regional District of Nanaimo</a> · <a href="https://www.comoxvalleyrd.ca/node/8722" target="_blank" rel="noopener">Comox Valley Regional District</a> · <a href="https://campbellriver.ca/emergencies" target="_blank" rel="noopener">Campbell River (Alertable)</a>. Elsewhere, check your regional district’s website.</li>
+      <li><a href="https://bcrfc.env.gov.bc.ca/warnings/index.htm" target="_blank" rel="noopener">BC River Forecast Centre advisories</a></li>
+      <li><a href="https://www.emergencyinfobc.gov.bc.ca/" target="_blank" rel="noopener">EmergencyInfoBC</a> for evacuation orders and official updates</li>
+      <li><a href="https://www.drivebc.ca/" target="_blank" rel="noopener">DriveBC</a> for road closures and flooding on highways</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span>Readings every 5 minutes in Pacific Standard Time, refreshed automatically while the app is open. Gauges report with up to a 2 hour delay. Lake and reservoir gauges measure water level only, and reservoir levels are controlled by BC Hydro.</span>
+    <span>Marks and bookmarks are saved on this device only. The Englishman River bench landmark (about 2.45 m, 134 m³/s) is estimated from the December 2025 high water, when the river came up to just below the bench. Marks are a guide, not official flood levels.</span>
+    <span>Rain: Environment Canada GEM model via Open-Meteo. Tides: Fisheries and Oceans Canada predictions. Map: © OpenStreetMap contributors.</span>
+    <span>Advisories, return periods and 5-day forecasts: BC River Forecast Centre. Typical and record highs: Environment Canada yearly peak records (typical = median of yearly peaks).</span>
+    <span>Data: Environment and Climate Change Canada, Water Survey of Canada. Provisional real-time data, subject to revision. <a id="official" href="https://wateroffice.ec.gc.ca/report/real_time_e.html?stn=08HB002" target="_blank" rel="noopener">Official station page</a></span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  // ---------- stations: every Vancouver Island real-time gauge (Water Survey of Canada, Nov 2026) ----------
+  // [id, official name, kind] kind: LQ = level + flow, L = level only
+  const RAW = [
+    ['08HA001','CHEMAINUS RIVER NEAR WESTHOLME','LQ'],['08HA002','COWICHAN RIVER AT LAKE COWICHAN','LQ'],['08HA003','KOKSILAH RIVER AT COWICHAN STATION','LQ'],
+    ['08HA009','COWICHAN LAKE NEAR LAKE COWICHAN','L'],['08HA010','SAN JUAN RIVER NEAR PORT RENFREW','LQ'],['08HA011','COWICHAN RIVER NEAR DUNCAN','LQ'],
+    ['08HA016','BINGS CREEK NEAR THE MOUTH','LQ'],['08HA068','GARBAGE CREEK NEAR THE MOUTH','LQ'],['08HA069','RENFREW CREEK NEAR PORT RENFREW','LQ'],
+    ['08HA070','HARRIS CREEK NEAR LAKE COWICHAN','LQ'],['08HA072','COTTONWOOD CREEK HEADWATERS','LQ'],
+    ['08HB002','ENGLISHMAN RIVER NEAR PARKSVILLE','LQ'],['08HB006','PUNTLEDGE RIVER AT COURTENAY','LQ'],['08HB008','SPROAT RIVER NEAR ALBERNI','LQ'],
+    ['08HB011','TSOLUM RIVER NEAR COURTENAY','LQ'],['08HB014','SARITA RIVER NEAR BAMFIELD','LQ'],['08HB017','SOMASS RIVER NEAR ALBERNI','LQ'],
+    ['08HB023','ASH RIVER BELOW MORAN CREEK','LQ'],['08HB025','BROWNS RIVER NEAR COURTENAY','LQ'],['08HB029','LITTLE QUALICUM RIVER NEAR QUALICUM BEACH','LQ'],
+    ['08HB032','MILLSTONE RIVER AT NANAIMO','LQ'],['08HB034','NANAIMO RIVER NEAR CASSIDY','LQ'],['08HB041','JUMP CREEK AT THE MOUTH','LQ'],
+    ['08HB048','CARNATION CREEK AT THE MOUTH','LQ'],['08HB074','CRUICKSHANK RIVER NEAR THE MOUTH','LQ'],['08HB075','DOVE CREEK NEAR THE MOUTH','LQ'],
+    ['08HB082','COMOX LAKE NEAR COURTENAY','L'],['08HB083','COURTENAY RIVER AT 5TH AVENUE BRIDGE','L'],['08HB084','PUNTLEDGE RIVER BELOW DIVERSION','LQ'],
+    ['08HB086','TOFINO CREEK NEAR THE MOUTH','LQ'],['08HB092','SOUTH NANAIMO RIVER NEAR JUNCTION','LQ'],
+    ['08HC001','GOLD RIVER BELOW UCONA RIVER','LQ'],['08HC006','CREST LAKE NEAR HIGHWAY 28','LQ'],
+    ['08HD005','QUINSAM RIVER NEAR CAMPBELL RIVER','LQ'],['08HD006','SALMON RIVER NEAR SAYWARD','LQ'],['08HD007','SALMON RIVER ABOVE MEMEKAY RIVER','LQ'],
+    ['08HD011','OYSTER RIVER BELOW WOODHUS CREEK','LQ'],['08HD018','ELK RIVER ABOVE CAMPBELL LAKE','LQ'],['08HD021','QUINSAM RIVER AT ARGONAUT BRIDGE','LQ'],
+    ['08HD022','CAMPBELL RIVER AT CAMPBELL RIVER LODGE','L'],['08HD023','LITTLE OYSTER RIVER AT YORKE ROAD','LQ'],['08HD024','CAMPBELL RIVER AT ARGONAUT WHARF','L'],
+    ['08HD025','WOKAS LAKE NEAR CAMPBELL RIVER','L'],['08HD026','QUINSAM DIVERSION NEAR CAMPBELL RIVER','LQ'],['08HD027','QUINSAM RIVER BELOW LOWER QUINSAM LAKE','LQ'],
+    ['08HD031','UPPER CAMPBELL LAKE AT STRATHCONA DAM','L'],['08HD033','BUTTLE LAKE ABOVE UPPER CAMPBELL LAKE','L'],['08HD034','QUINSAM RIVER DIVERSION HEADPOND','L'],
+    ['08HD035','CAMPBELL RIVER NEAR CAMPBELL RIVER CABLEWAY','LQ'],
+    ['08HE001','MARBLE RIVER AT OUTLET OF ALICE LAKE','LQ'],['08HE006','ZEBALLOS RIVER NEAR ZEBALLOS','LQ'],['08HE008','ZEBALLOS RIVER AT MOOK PEAK','LQ'],
+    ['08HE009','KLASKISH RIVER NEAR KLASKINO INLET','LQ'],['08HF004','TSITIKA RIVER BELOW CATHERINE CREEK','LQ'],['08HF005','NIMPKISH RIVER ABOVE WOSS RIVER','LQ'],
+    ['08HF006','SAN JOSEF RIVER BELOW SHARP CREEK','LQ'],['08HF012','PUGH CREEK NEAR NAHWITTI LAKE','LQ'],['08HF013','SIMPSON CREEK NEAR KOPRINO HARBOUR','LQ'],
+    ['08HF015','EVE RIVER BELOW KUNNUM CREEK','LQ']
+  ];
+  const LAKES = ['08HA009','08HB082','08HC006','08HD025','08HD026','08HD031','08HD033','08HD034'];
+  const TIDAL = ['08HB083','08HD022','08HD024'];
+  const COASTAL = ['08HB002','08HB029','08HB032','08HB034','08HB006','08HB011','08HB083','08HD035','08HD022','08HD024','08HD011','08HD023','08HA011','08HA003','08HA001','08HB017','08HA010','08HC001','08HE006','08HD006','08HB086','08HB014'];
+  const REGIONS = [
+    ['Lakes & reservoirs', id => LAKES.includes(id)],
+    ['South Island & Cowichan', id => /^08HA/.test(id)],
+    ['Nanaimo, Parksville & Qualicum', id => ['08HB002','08HB029','08HB032','08HB034','08HB041','08HB092'].includes(id)],
+    ['Alberni & West Coast', id => ['08HB008','08HB014','08HB017','08HB023','08HB048','08HB086'].includes(id)],
+    ['Comox Valley', id => /^08HB/.test(id)],
+    ['Campbell River & Strathcona', id => /^08H[CD]/.test(id)],
+    ['North Island', id => /^08H[EF]/.test(id)]
+  ];
+  const SMALL = new Set(['near','at','below','above','of','the','and']);
+  const pretty = s => s.toLowerCase().split(' ').map((w,i)=> (i && SMALL.has(w)) ? w : w.replace(/^(\d+)(st|nd|rd|th)$/,'$1$2').replace(/^./,c=>c.toUpperCase())).join(' ');
+  const STATIONS = RAW.map(([id,n,k])=>({ id, name: pretty(n), kind: k, region: REGIONS.find(r=>r[1](id))[0] }));
+  const BY_ID = Object.fromEntries(STATIONS.map(s=>[s.id,s]));
+  const DEFAULT_MARKS = { '08HB002': { name: 'the bench', level: 2.45, q: 134, landmark: true, note: 'Estimated from the December 2025 high water, when the river came up to just below the bench.' } };
+
+  const API = 'https://api.weather.gc.ca/collections/hydrometric-realtime/items';
+  const REFRESH_MS = 5*60*1000;
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+    set(k,v){ try { localStorage.setItem(k,v); } catch(e){} },
+    json(k,d){ try { const v = JSON.parse(localStorage.getItem(k)); return v==null?d:v; } catch(e){ return d; } }
+  };
+  let favs = store.json('ir.favs', null);
+  if (!Array.isArray(favs)) favs = [];
+  let marks = store.json('ir.marks', {});
+  if (typeof marks !== 'object' || !marks) marks = {};
+  const S = { id: null, pts: [], metric: store.get('er.metric') || 'level', range: store.get('er.range') || '3', loadedDays: 0, loaded: false, busy: false, lastFetch: 0, token: 0 };
+
+  // ---------- time in PST (UTC-8), the stations' standard ----------
+  const PST = -8*3600;
+  const pst = t => new Date((t + PST)*1000);
+  const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const hhmm = d => String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0');
+  const fmtFull = t => { const d = pst(t); return DOW[d.getUTCDay()]+' '+MON[d.getUTCMonth()]+' '+d.getUTCDate()+', '+hhmm(d); };
+  const fmtDay = t => { const d = pst(t); return DOW[d.getUTCDay()]+' '+d.getUTCDate(); };
+  const fmtAge = s => s < 90 ? 'just now' : s < 3600 ? Math.round(s/60)+' min ago' : s < 172800 ? (s/3600).toFixed(1)+' h ago' : Math.round(s/86400)+' days ago';
+  const cm = v => (v>0?'+':v<0?'−':'±')+Math.abs(v*100).toFixed(0)+' cm';
+  const m2 = v => v.toFixed(2)+' m';
+
+  // ---------- picker + bookmarks ----------
+  function buildPicker(){
+    const sel = $('river'); sel.innerHTML = '';
+    const add = (label, list) => { if (!list.length) return; const g = document.createElement('optgroup'); g.label = label;
+      list.forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=(favs.includes(s.id)?'★ ':'')+s.name; g.appendChild(o); }); sel.appendChild(g); };
+    add('★ Bookmarked', favs.map(id=>BY_ID[id]).filter(Boolean));
+    [...REGIONS.slice(1), REGIONS[0]].forEach(([r]) => add(r, STATIONS.filter(s=>s.region===r && !favs.includes(s.id)).sort((a,b)=>a.name.localeCompare(b.name))));
+    if (S.id) sel.value = S.id;
+  }
+  function syncStar(){ const on = favs.includes(S.id); $('star').setAttribute('aria-pressed', String(on)); $('star').textContent = on ? '★' : '☆'; $('star').setAttribute('aria-label', on ? 'Remove bookmark' : 'Bookmark this river'); $('star').title = on ? 'Remove bookmark' : 'Bookmark this river (opens first next time)'; }
+  $('star').addEventListener('click', ()=>{
+    favs = favs.includes(S.id) ? favs.filter(x=>x!==S.id) : [S.id, ...favs];
+    store.set('ir.favs', JSON.stringify(favs)); buildPicker(); syncStar();
+  });
+  $('river').addEventListener('change', e => selectStation(e.target.value, true));
+
+  function selectStation(id, push){
+    if (!BY_ID[id]) id = '08HB002';
+    S.id = id; S.pts = []; S.loadedDays = 0; S.loaded = false; S.token++;
+    store.set('ir.last', id);
+    if (push && location.hash !== '#'+id) { try { history.replaceState(null, '', '#'+id); } catch(e){ location.hash = id; } }
+    const st = BY_ID[id];
+    $('river').value = id;
+    $('title').textContent = st.name;
+    $('eyebrow').textContent = 'Station '+id+' · '+st.region;
+    $('official').href = 'https://wateroffice.ec.gc.ca/report/real_time_e.html?stn='+id;
+    $('m-flow').disabled = st.kind === 'L';
+    if (st.kind === 'L') S.metric = 'level';
+    $('flowWrap').hidden = st.kind === 'L';
+    closeMarkForm();
+    syncStar(); clearView();
+    try { const c = JSON.parse(localStorage.getItem('ir.cache.'+id)||'[]'); if (Array.isArray(c) && c.length) S.pts = c; } catch(e){}
+    renderAll(); renderOutlook();
+    load(Math.max(7, +S.range));
+    if (!OUT[id] || Date.now()-OUT[id].at > 15*60*1000) loadOutlook(id);
+    $('tidalNote').hidden = !TIDAL.includes(id);
+    if (!RAIN[id] || Date.now()-RAIN[id].at > 30*60*1000) loadRain(id); else renderRain();
+    if (!TIDES[id] || Date.now()-(TIDES[id].at||0) > 6*3600*1000) loadTides(id); else renderTides();
+    renderAlerts();
+  }
+  function clearView(){
+    $('stage').innerHTML='–<small>m</small>'; $('flow').innerHTML='–<small>m³/s</small>'; $('d6').textContent='–'; $('d24').textContent='–';
+    $('trend').className='pill steady'; $('trend').textContent='Loading'; $('fresh').textContent='Loading readings…';
+    ['sPeak','sLow','sFlow','sRate'].forEach(k=>$(k).textContent='–'); ['sPeakT','sLowT','sFlowT','sRateT'].forEach(k=>$(k).innerHTML='&nbsp;');
+    showMsg(''); unhover();
+  }
+
+  // ---------- data ----------
+  async function fetchDays(id, days){
+    const since = new Date(Date.now() - days*86400e3).toISOString().slice(0,19)+'Z';
+    const url = API+'?STATION_NUMBER='+id+'&f=json&limit=10000&skipGeometry=true&properties=DATETIME,LEVEL,DISCHARGE&sortby=DATETIME&datetime='+since+'/..';
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    return (j.features||[]).map(f=>f.properties).filter(p=>p && p.DATETIME && p.LEVEL!=null)
+      .map(p=>[Math.round(Date.parse(p.DATETIME)/1000), +p.LEVEL, p.DISCHARGE==null?null:+p.DISCHARGE]);
+  }
+  function merge(rows){
+    const m = new Map(S.pts.map(p=>[p[0],p]));
+    rows.forEach(p=>m.set(p[0],p));
+    S.pts = [...m.values()].sort((a,b)=>a[0]-b[0]);
+  }
+  async function load(days){
+    if (S.busy) return;
+    const id = S.id, tok = S.token;
+    S.busy = true; $('refresh').disabled = true; $('refresh').textContent = 'Refreshing…';
+    try {
+      const rows = await fetchDays(id, S.loadedDays >= days ? 1 : days);
+      if (tok !== S.token) return;
+      merge(rows); S.loadedDays = Math.max(S.loadedDays, days); S.loaded = true; S.lastFetch = Date.now();
+      showMsg(S.pts.length ? '' : 'This gauge has no readings in the last '+days+' days. It may be offline.');
+      try { localStorage.setItem('ir.cache.'+id, JSON.stringify(S.pts.slice(-2016))); } catch(e){}
+    } catch(e){
+      if (tok !== S.token) return;
+      S.loaded = true;
+      showMsg(S.pts.length ? 'Couldn’t reach Environment Canada just now. Showing the last readings this device saved.' : 'Couldn’t reach Environment Canada. Check your connection and tap Refresh now.');
+    } finally {
+      S.busy = false; $('refresh').disabled = false; $('refresh').textContent = 'Refresh now';
+      if (tok === S.token) renderAll(); else load(Math.max(7, +S.range));
+    }
+  }
+
+  function nearest(t, tol){
+    const p = S.pts; if (!p.length) return null;
+    let lo=0, hi=p.length-1;
+    while (lo<hi){ const mid=(lo+hi)>>1; if (p[mid][0]<t) lo=mid+1; else hi=mid; }
+    let best = p[lo]; if (lo>0 && Math.abs(p[lo-1][0]-t) < Math.abs(best[0]-t)) best = p[lo-1];
+    return Math.abs(best[0]-t) <= tol ? best : null;
+  }
+  const getMark = id => (id in marks) ? marks[id] : (DEFAULT_MARKS[id] || null);
+
+  // ---------- flood outlook: RFC advisories, 5-day forecast, current return period; EC yearly peaks ----------
+  const AGO = 'https://services6.arcgis.com/ubm4tcTYICKBpist/arcgis/rest/services/';
+  const ADV_NAMES = {2:'High Streamflow Advisory',3:'Flood Watch',4:'Flood Warning'};
+  const ADV_MEANING = {2:'Rivers are rising or expected to rise rapidly. Major flooding is not expected; minor flooding in low-lying areas is possible.',3:'River levels are rising and will approach or may exceed bankfull. Flooding next to affected rivers may occur.',4:'River levels have exceeded bankfull or will imminently. Flooding of areas next to affected rivers will result.'};
+  const OUT = {}; // per station: {adv, fc, now, hist, at}
+  const coordCache = store.json('ir.coords', {});
+  const getJSON = async url => { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error('HTTP '+r.status); const j = await r.json(); if (j && j.error) throw new Error(j.error.message||'error'); return j; };
+  const agoQuery = (svc, params) => getJSON(AGO+svc+'/FeatureServer/0/query?'+new URLSearchParams(Object.assign({ outFields:'*', returnGeometry:'false', f:'json' }, params)));
+  const num = v => { const n = parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,' ').trim().split(/\s+/)[0]); return isFinite(n) ? n : null; };
+  const median = a => { const b=[...a].sort((x,y)=>x-y), n=b.length; return n ? (n%2 ? b[(n-1)/2] : (b[n/2-1]+b[n/2])/2) : null; };
+  const MONS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fmtDate = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d||''); return m ? MONS[+m[2]-1]+' '+(+m[3])+', '+m[1] : ''; };
+
+  async function coordsFor(id){
+    if (coordCache[id]) return coordCache[id];
+    const j = await getJSON('https://api.weather.gc.ca/collections/hydrometric-stations/items?f=json&STATION_NUMBER='+id);
+    const c = j.features && j.features[0] && j.features[0].geometry && j.features[0].geometry.coordinates;
+    if (!c) throw new Error('no coords');
+    coordCache[id] = [c[0], c[1]]; store.set('ir.coords', JSON.stringify(coordCache));
+    return coordCache[id];
+  }
+  async function fetchAdvisory(id){
+    const c = await coordsFor(id);
+    const j = await agoQuery('BC_Flood_Advisory_and_Warning_Notifications_(Public_View)', { geometry: c[0]+','+c[1], geometryType:'esriGeometryPoint', inSR:'4326', spatialRel:'esriSpatialRelIntersects', outFields:'Advisory,Major_Basin,Sub_Basin,Comments,Date_Modified' });
+    let best = null;
+    (j.features||[]).forEach(f=>{ const a=f.attributes; if (!best || (a.Advisory||0) > (best.Advisory||0)) best = a; });
+    return best ? { level: best.Advisory||1, basin: best.Sub_Basin || best.Major_Basin || '', url: /^https:\/\//.test(best.Comments||'') ? best.Comments : null, modified: best.Date_Modified||null } : { level: 1, basin: '' };
+  }
+  async function fetchForecast(id){
+    const j = await agoQuery('coffee_MapHub_forecast', { where: "Station_ID='"+id+"'" });
+    const a = j.features && j.features[0] && j.features[0].attributes; if (!a) return null;
+    const unit = /\(m\)/.test(a.Forecast_maximum_in_5_days||'') ? 'm' : 'm³/s';
+    return { max: num(a.Forecast_maximum_in_5_days), ave: num(a.Forecast_average_in_5_days), min: num(a.Forecast_minimum_in_5_days), unit,
+      rpMax: (a.Return_Period_FOR||'').trim(), rpAve: (a.ReturnPeriodAve||'').trim(), rpMin: (a.ReturnPeriodMin||'').trim(), rtpMax: a.RTP_MAX_5DAYS||0,
+      issued: (a.Issued_at||'').trim(), graph: /^https?:\/\//.test(a.Hydrograph_url||'') ? a.Hydrograph_url.replace(/^http:/,'https:') : null };
+  }
+  async function fetchNowRP(id){
+    const j = await agoQuery('StationInformation', { where: "Station_ID='"+id+"'", outFields:'Return_Period,Updated_at' });
+    const a = j.features && j.features[0] && j.features[0].attributes; if (!a) return null;
+    const rp = (a.Return_Period||'').trim(); return rp && !/no data/i.test(rp) ? rp : null;
+  }
+  async function fetchHistory(id){
+    const key = 'ir.hist.'+id, cached = store.json(key, null);
+    if (cached && Date.now() - cached.at < 7*86400e3) return cached;
+    const j = await getJSON('https://api.weather.gc.ca/collections/hydrometric-annual-peaks/items?f=json&limit=1000&skipGeometry=true&STATION_NUMBER='+id);
+    const rows = (j.features||[]).map(f=>f.properties).filter(p=>p && /max/i.test(p.PEAK_CODE_EN||'') && isFinite(p.PEAK));
+    const pick = re => rows.filter(p=>re.test(p.DATA_TYPE_EN||''));
+    const sum = list => { if (list.length < 5) return null; const rec = list.reduce((a,b)=>b.PEAK>a.PEAK?b:a); return { typ: median(list.map(p=>p.PEAK)), n: list.length, rec: rec.PEAK, recDate: rec.DATE || '' }; };
+    const h = { at: Date.now(), q: sum(pick(/disch/i)), h: sum(pick(/level/i)) };
+    store.set(key, JSON.stringify(h));
+    return h;
+  }
+  async function loadOutlook(id){
+    const tok = S.token;
+    const [adv, fc, now, hist] = await Promise.all([fetchAdvisory(id).catch(()=>undefined), fetchForecast(id).catch(()=>undefined), fetchNowRP(id).catch(()=>undefined), fetchHistory(id).catch(()=>undefined)]);
+    OUT[id] = { adv, fc, now, hist, at: Date.now() };
+    if (tok === S.token && id === S.id) { renderOutlook(); renderChart(); renderNow(); }
+  }
+
+  function renderOutlook(){
+    const o = OUT[S.id] || {}, mk = getMark(S.id), st = BY_ID[S.id];
+    // advisory banner
+    const adv = o.adv, banner = $('adv'), none = $('advNone');
+    banner.className = 'adv';
+    if (adv && adv.level >= 2){
+      banner.hidden = false; none.hidden = true; banner.classList.add('l'+adv.level);
+      $('advLevel').textContent = ADV_NAMES[adv.level]+' in effect';
+      $('advText').textContent = (adv.basin ? adv.basin+'. ' : '')+ADV_MEANING[adv.level];
+      $('advLink').href = adv.url || 'https://bcrfc.env.gov.bc.ca/warnings/index.htm';
+    } else {
+      banner.hidden = true;
+      none.hidden = adv === undefined && !OUT[S.id] ? true : false;
+      none.textContent = adv === undefined ? 'Couldn’t check River Forecast Centre advisories just now.' : 'No River Forecast Centre advisory for this area right now.';
+    }
+    // forecast
+    const fc = o.fc, head = $('fcHead'), sub = $('fcSub'), fm = $('fcMark');
+    fm.hidden = true;
+    const nowTxt = o.now ? 'Right now: <span class="chip">'+esc(fmtRP(o.now))+'</span> flow. ' : '';
+    if (!OUT[S.id]) { head.textContent = 'Loading forecast…'; sub.textContent = ''; }
+    else if (fc && fc.max != null){
+      const u = fc.unit, f = v => v==null ? '–' : (u==='m' ? v.toFixed(2) : v < 10 ? v.toFixed(1) : Math.round(v));
+      head.textContent = 'Peak '+f(fc.min)+'–'+f(fc.max)+' '+u;
+      let t = nowTxt + 'Most likely peak <b>'+f(fc.ave)+' '+u+'</b>, a <span class="chip'+(fc.rtpMax>=2?' hot':'')+'">'+esc(fmtRP(fc.rpAve)||'?')+'</span> flow.';
+      if (fc.rpMax && fc.rpMax !== fc.rpAve) t += ' Upper estimate: <span class="chip'+(fc.rtpMax>=2?' hot':'')+'">'+esc(fmtRP(fc.rpMax))+'</span>.';
+      const hq = o.hist && o.hist.q;
+      if (u !== 'm' && hq && fc.ave != null) t += '<br>This river’s typical yearly high is '+Math.round(hq.typ)+' m³/s, so the most likely peak is '+(fc.ave >= hq.typ ? 'above' : Math.round(fc.ave/hq.typ*100)+'% of')+' that.';
+      t += '<br>Issued '+esc(fc.issued||'recently')+'.'+(fc.graph ? ' <a href="'+esc(fc.graph)+'" target="_blank" rel="noopener">Forecast graph</a>' : '');
+      sub.innerHTML = t;
+      if (mk && mk.q && u !== 'm'){
+        fm.hidden = false;
+        fm.textContent = fc.min >= mk.q ? 'Every forecast scenario passes '+mk.name+' (about '+mk.q+' m³/s).' : fc.max >= mk.q ? 'The higher forecast scenarios pass '+mk.name+' (about '+mk.q+' m³/s).' : 'Not forecast to reach '+mk.name+' (about '+mk.q+' m³/s).';
+      }
+    } else {
+      head.textContent = fc === undefined ? 'Forecast unavailable' : 'No 5-day forecast for this gauge';
+      sub.innerHTML = nowTxt + (fc === undefined ? 'Couldn’t reach the River Forecast Centre just now.' : 'The River Forecast Centre models about 49 Vancouver Island gauges, and only issues forecasts when rain is expected.');
+    }
+    // history
+    const h = o.hist, box = $('hist');
+    const hq = h && h.q, hh = h && h.h;
+    if (hq || hh){
+      box.hidden = false;
+      $('hTyp').textContent = [hh ? hh.typ.toFixed(2)+' m' : null, hq ? Math.round(hq.typ)+' m³/s' : null].filter(Boolean).join(' · ');
+      $('hTypN').textContent = 'median of '+Math.max(hq?hq.n:0, hh?hh.n:0)+' yearly peaks';
+      $('hRec').textContent = [hh ? hh.rec.toFixed(2)+' m' : null, hq ? Math.round(hq.rec)+' m³/s' : null].filter(Boolean).join(' · ');
+      $('hRecN').textContent = [hh ? fmtDate(hh.recDate) : null, hq && (!hh || fmtDate(hq.recDate)!==fmtDate(hh.recDate)) ? fmtDate(hq.recDate) : null].filter(Boolean).join(' / ') || ' ';
+    } else box.hidden = true;
+  }
+  const fmtRP = r => { r = String(r||'').trim(); if (/^<\s*1\s*y/i.test(r)) return 'under 1-year'; return r.replace(/(\d)\s*-\s*(\d)/,'$1 to $2').replace(/\s*y(ear)?s?$/i,'-year'); };
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  // reference lines for the chart: mark, typical yearly high, record
+  function refLines(metric){
+    const out = [], mk = getMark(S.id), h = (OUT[S.id]||{}).hist, k = metric==='level' ? 'h' : 'q';
+    if (mk){ const v = metric==='level' ? mk.level : mk.q; if (v != null) out.push({ v, label: mk.name+' '+(metric==='level'?m2(v):v+' m³/s'), color:'var(--bench)', dash:'' }); }
+    if (h && h[k]){ out.push({ v: h[k].typ, label: 'typical yearly high '+(metric==='level'?m2(h[k].typ):Math.round(h[k].typ)+' m³/s'), color:'var(--hist)', dash:'6 4' });
+      out.push({ v: h[k].rec, label: 'record '+(metric==='level'?m2(h[k].rec):Math.round(h[k].rec)+' m³/s'), color:'var(--danger)', dash:'2 4' }); }
+    return out;
+  }
+
+  // ---------- rain near the gauge (Open-Meteo, Environment Canada GEM model) ----------
+  const RAIN = {};
+  async function loadRain(id){
+    const tok = S.token;
+    try {
+      const c = await coordsFor(id);
+      const url = 'https://api.open-meteo.com/v1/forecast?latitude='+c[1].toFixed(4)+'&longitude='+c[0].toFixed(4)+'&hourly=precipitation&past_days=1&forecast_days=3&models=gem_seamless&timezone=GMT';
+      const j = await getJSON(url);
+      const t = (j.hourly && j.hourly.time) || [], p = (j.hourly && j.hourly.precipitation) || [];
+      RAIN[id] = { at: Date.now(), hours: t.map((x,i)=>[Math.round(Date.parse(x+'Z')/1000), p[i]==null?null:+p[i]]) };
+    } catch(e){ RAIN[id] = { at: Date.now(), error: true }; }
+    if (tok === S.token) renderRain();
+  }
+  function renderRain(){
+    const R = RAIN[S.id], card = $('rainCard');
+    if (!R){ $('rPast').textContent = $('rNext24').textContent = $('rNext48').textContent = '–'; $('rainChart').innerHTML=''; return; }
+    if (R.error || !R.hours.length){ card.hidden = true; return; }
+    card.hidden = false;
+    const now = Date.now()/1000;
+    const sum = (a,b) => R.hours.filter(h=>h[0]>=a && h[0]<b && h[1]!=null).reduce((s,h)=>s+h[1],0);
+    const fmt = v => (v<10 ? v.toFixed(1) : Math.round(v))+' mm';
+    $('rPast').textContent = fmt(sum(now-86400, now)); $('rNext24').textContent = fmt(sum(now, now+86400)); $('rNext48').textContent = fmt(sum(now, now+172800));
+    const hrs = R.hours.filter(h=>h[0]>=now-86400 && h[0]<now+172800);
+    const svg = $('rainChart'), W = svg.clientWidth || 600, H = 90, B = 16;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    if (!hrs.length){ svg.innerHTML=''; return; }
+    const t0 = now-86400, t1 = now+172800, x = t => (t-t0)/(t1-t0)*W, max = Math.max(4, ...hrs.map(h=>h[1]||0));
+    const bw = Math.max(1, W/72 - 1);
+    let s = '';
+    hrs.forEach(h=>{ const v=h[1]||0, bh=(v/max)*(H-B-6); if (bh>0) s+='<rect x="'+x(h[0]).toFixed(1)+'" y="'+(H-B-bh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+bh.toFixed(1)+'" fill="'+(h[0]<now?'var(--muted)':'var(--water)')+'" opacity="'+(h[0]<now?.5:.9)+'"/>'; });
+    const xn = x(now);
+    s += '<line x1="'+xn+'" x2="'+xn+'" y1="0" y2="'+(H-B)+'" stroke="var(--fg)" stroke-dasharray="2 3"/>';
+    s += '<text x="'+(xn+4)+'" y="10" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--muted)">now</text>';
+    s += '<text x="'+(W-2)+'" y="10" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--muted)">max '+max.toFixed(1)+' mm/h</text>';
+    for (let d=0; d<=3; d++){ const tx = t0 + d*86400; const lx = x(tx); s += '<text x="'+Math.min(Math.max(lx,14),W-14)+'" y="'+(H-3)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--muted)">'+(d===1?'now':(d<1?'−24 h':'+'+((d-1)*24)+' h'))+'</text>'; }
+    svg.innerHTML = s;
+  }
+
+  // ---------- tides for river mouths (Fisheries and Oceans Canada IWLS) ----------
+  const IWLS = 'https://api-iwls.dfo-mpo.gc.ca/api/v1/';
+  const TIDES = {};
+  async function tideStations(){
+    const c = store.json('ir.tideStations', null);
+    if (c && Date.now()-c.at < 30*86400e3) return c.list;
+    const j = await getJSON(IWLS+'stations?chs-region-code=PAC');
+    const list = (Array.isArray(j)?j:[]).filter(st => (st.timeSeries||[]).some(t => (typeof t === 'string' ? t : t && t.code) === 'wlp-hilo'))
+      .map(st => ({ id: st.id, name: st.officialName, lat: +st.latitude, lon: +st.longitude }));
+    store.set('ir.tideStations', JSON.stringify({ at: Date.now(), list }));
+    return list;
+  }
+  const km = (a,b,c,d) => { const R=6371, r=Math.PI/180, dl=(c-a)*r, dn=(d-b)*r; const h=Math.sin(dl/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
+  async function loadTides(id){
+    const tok = S.token;
+    if (!COASTAL.includes(id)){ TIDES[id] = { none: true }; if (tok===S.token) renderTides(); return; }
+    try {
+      const [c, list] = await Promise.all([coordsFor(id), tideStations()]);
+      let best = null, bd = Infinity;
+      list.forEach(t=>{ const d = km(c[1],c[0],t.lat,t.lon); if (d<bd){ bd=d; best=t; } });
+      if (!best || bd > 45) { TIDES[id] = { none: true }; }
+      else {
+        const from = new Date(Date.now()-3*3600e3).toISOString().slice(0,19)+'Z', to = new Date(Date.now()+48*3600e3).toISOString().slice(0,19)+'Z';
+        const j = await getJSON(IWLS+'stations/'+best.id+'/data?time-series-code=wlp-hilo&from='+from+'&to='+to);
+        const ev = (Array.isArray(j)?j:[]).map(e=>[Math.round(Date.parse(e.eventDate)/1000), +e.value]).sort((a,b)=>a[0]-b[0]);
+        TIDES[id] = { at: Date.now(), station: best.name, events: ev.map((e,i)=>{ const p=ev[i-1], n=ev[i+1]; const hi = (p? e[1]>p[1] : true) && (n? e[1]>n[1] : true); return { t:e[0], v:e[1], hi: p||n ? hi : true }; }) };
+      }
+    } catch(e){ TIDES[id] = { error: true }; }
+    if (tok === S.token) renderTides();
+  }
+  function renderTides(){
+    const T = TIDES[S.id], card = $('tideCard');
+    if (!T || T.none || T.error || !T.events || !T.events.length){ card.hidden = true; return; }
+    card.hidden = false;
+    $('tideStn').textContent = pretty(T.station||'');
+    const now = Date.now()/1000, ev = T.events.filter(e=>e.t >= now-1800).slice(0,6);
+    const top = Math.max(...ev.filter(e=>e.hi).map(e=>e.v));
+    $('tideList').innerHTML = ev.map(e=>'<div class="tide'+(e.hi && e.v===top?' peak':'')+'"><div class="n">'+(e.hi?'High':'Low')+' · '+esc(fmtFull(e.t))+'</div><b>'+e.v.toFixed(1)+' m</b>'+(e.hi && e.v===top?'<div class="n">highest in 48 h</div>':'')+'</div>').join('');
+  }
+
+  // ---------- push alerts (needs the server functions; hidden on a plain static deploy) ----------
+  let alertKey = null;
+  let alertRivers = store.json('ir.alerts', []); if (!Array.isArray(alertRivers)) alertRivers = [];
+  const pushOK = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  async function initAlerts(){
+    try { const r = await fetch('/api/vapid', { cache: 'no-store' }); if (!r.ok) return; const j = await r.json(); if (!j.key) return; alertKey = j.key; } catch(e){ return; }
+    renderAlerts();
+  }
+  function renderAlerts(){
+    const card = $('alertCard');
+    if (!alertKey){ card.hidden = true; return; }
+    card.hidden = false;
+    const on = alertRivers.includes(S.id), btn = $('alertBtn'), fine = $('alertFine');
+    const standaloneNow = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    btn.hidden = false;
+    if (isIOS && !standaloneNow){ btn.hidden = true; fine.textContent = 'On iPhone, add this app to your Home Screen first, then open it from there to turn on alerts.'; return; }
+    if (!pushOK){ btn.hidden = true; fine.textContent = 'This browser can’t receive alerts.'; return; }
+    if (Notification.permission === 'denied'){ btn.hidden = true; fine.textContent = 'Notifications are blocked for this app. Allow them in your browser or phone settings to use alerts.'; return; }
+    btn.textContent = on ? 'Turn off alerts for this river' : 'Turn on alerts for this river';
+    const mk = getMark(S.id);
+    fine.textContent = on ? 'Alerts are on'+(mk ? ', including when the water reaches '+mk.name+' ('+m2(mk.level)+')' : '')+'. Following '+alertRivers.length+' river'+(alertRivers.length===1?'':'s')+'.' : (mk ? 'You’ll also get an alert when the water reaches '+mk.name+'.' : 'Set a mark above to also get an alert when the water reaches it.');
+  }
+  const b64ToBytes = s => { const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s+p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(b, c=>c.charCodeAt(0)); };
+  async function syncAlerts(){
+    if (!alertKey || !pushOK) return;
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub && !alertRivers.length) return;
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(alertKey) });
+    const rivers = alertRivers.map(id=>{ const mk = getMark(id); return { id, mark: mk ? mk.level : null, markName: mk ? mk.name : null }; });
+    const r = await fetch('/api/subscribe', { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), rivers }) });
+    if (!r.ok) throw new Error('subscribe failed');
+    if (!alertRivers.length) { try { await sub.unsubscribe(); } catch(e){} }
+  }
+  $('alertBtn').addEventListener('click', async ()=>{
+    const btn = $('alertBtn'), was = alertRivers.slice();
+    btn.disabled = true;
+    try {
+      if (!alertRivers.includes(S.id)){
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted'){ renderAlerts(); return; }
+        alertRivers = [S.id, ...alertRivers];
+      } else alertRivers = alertRivers.filter(x=>x!==S.id);
+      await syncAlerts();
+      store.set('ir.alerts', JSON.stringify(alertRivers));
+    } catch(e){ alertRivers = was; $('alertFine').textContent = 'Couldn’t update alerts. Check your connection and try again.'; btn.disabled = false; return; }
+    btn.disabled = false; renderAlerts();
+  });
+
+  // ---------- island map (Leaflet + OpenStreetMap tiles, loaded on first open) ----------
+  const RP_COLORS = ['#8fbfb2','#a9cf6a','#f2c84b','#f39a3d','#e8622c','#c9302c','#8e1b5c','#4b0d3a'];
+  const RP_LABELS = ['Under 1-year','1 to 2-year','2 to 5-year','5 to 10-year','10 to 20-year','20 to 50-year','50 to 100-year','100-year +'];
+  const ADV_COLORS = { 2:'#e0b400', 3:'#e8731a', 4:'#c9302c' };
+  function rpRank(r){ r = String(r||'').trim(); if (!r || /no data/i.test(r)) return -1; if (/^</.test(r)) return 0; if (/^>/.test(r)) return 7; const n = parseFloat(r); if (!isFinite(n)) return -1; return n>=100?7: n>=50?6: n>=20?5: n>=10?4: n>=5?3: n>=2?2: 1; }
+  let MAP = null, markerLayer = null, advLayer = null, mapMode = 'now', mapData = null, leafletP = null;
+  function loadLeaflet(){
+    if (window.L) return Promise.resolve();
+    if (leafletP) return leafletP;
+    leafletP = new Promise((res, rej)=>{
+      const css = document.createElement('link'); css.rel='stylesheet'; css.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
+      const js = document.createElement('script'); js.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; js.onload=()=>res(); js.onerror=()=>{ leafletP=null; rej(new Error('leaflet')); }; document.head.appendChild(js);
+    });
+    return leafletP;
+  }
+  async function allCoords(){
+    const c = store.json('ir.coordsAll', null);
+    if (c && Date.now()-c.at < 30*86400e3) return c.map;
+    const j = await getJSON('https://api.weather.gc.ca/collections/hydrometric-stations/items?f=json&limit=1000&bbox=-128.6,48.2,-123.2,51.0&PROV_TERR_STATE_LOC=BC');
+    const map = {}; (j.features||[]).forEach(f=>{ const id=f.properties.STATION_NUMBER; if (BY_ID[id]) map[id]=[f.geometry.coordinates[0], f.geometry.coordinates[1]]; });
+    store.set('ir.coordsAll', JSON.stringify({ at: Date.now(), map }));
+    Object.assign(coordCache, map);
+    return map;
+  }
+  async function loadMapData(){
+    const [coords, now, fc, adv] = await Promise.all([
+      allCoords(),
+      agoQuery('StationInformation', { where: "Station_ID like '08H%'", outFields:'Station_ID,Return_Period,Current_Reading_' }).catch(()=>null),
+      agoQuery('coffee_MapHub_forecast', { where: "Station_ID like '08H%'", outFields:'Station_ID,ReturnPeriodAve,Forecast_average_in_5_days,Issued_at' }).catch(()=>null),
+      getJSON(AGO+'BC_Flood_Advisory_and_Warning_Notifications_(Public_View)/FeatureServer/0/query?'+new URLSearchParams({ where:'Advisory>=2', outFields:'Advisory,Major_Basin,Comments', returnGeometry:'true', outSR:'4326', maxAllowableOffset:'0.01', geometryPrecision:'4', f:'geojson' })).catch(()=>null)
+    ]);
+    const byNow = {}, byFc = {}; let issued = '';
+    ((now&&now.features)||[]).forEach(f=>{ byNow[f.attributes.Station_ID] = f.attributes; });
+    ((fc&&fc.features)||[]).forEach(f=>{ byFc[f.attributes.Station_ID] = f.attributes; issued = issued || (f.attributes.Issued_at||'').trim(); });
+    mapData = { at: Date.now(), coords, byNow, byFc, adv, issued, ok: { now: !!now, fc: !!fc, adv: !!adv } };
+  }
+  function drawMap(){
+    if (!MAP || !mapData) return;
+    if (markerLayer) markerLayer.remove(); if (advLayer) advLayer.remove();
+    if (mapData.adv && mapData.adv.features){
+      advLayer = L.geoJSON(mapData.adv, { style: f => ({ color: ADV_COLORS[f.properties.Advisory]||'#e8731a', weight: 1.5, fillOpacity: .18 }),
+        onEachFeature: (f, layer) => layer.bindPopup('<b>'+esc(({2:'High Streamflow Advisory',3:'Flood Watch',4:'Flood Warning'})[f.properties.Advisory]||'Advisory')+'</b><br>'+esc(f.properties.Major_Basin||'')+(/^https?:/.test(f.properties.Comments||'')?'<br><a href="'+esc(f.properties.Comments.replace(/^http:/,'https:'))+'" target="_blank" rel="noopener">Read the bulletin</a>':'')) }).addTo(MAP);
+    }
+    markerLayer = L.layerGroup().addTo(MAP);
+    STATIONS.forEach(st=>{
+      const c = mapData.coords[st.id]; if (!c) return;
+      const src = mapMode==='now' ? mapData.byNow[st.id] : mapData.byFc[st.id];
+      const rp = src ? (mapMode==='now' ? src.Return_Period : src.ReturnPeriodAve) : null;
+      const k = rpRank(rp);
+      const m = L.circleMarker([c[1], c[0]], { radius: k>=2?9:7, color: '#1d2b2a', weight: 1, fillColor: k<0 ? '#b8c2c0' : RP_COLORS[k], fillOpacity: k<0 ? .6 : .95 });
+      const detail = mapMode==='now' ? (src && src.Current_Reading_ ? esc(String(src.Current_Reading_).replace(/\s+/g,' ')) : 'No current return period') : (src ? 'Most likely peak '+esc(String(src.Forecast_average_in_5_days||'').trim()) : 'No 5-day forecast for this gauge');
+      m.bindPopup('<b>'+esc(st.name)+'</b><br>'+(k>=0 ? esc(RP_LABELS[k])+' flow'+(mapMode==='fc'?' (forecast)':'')+'<br>' : '')+detail+'<br><button class="popbtn" data-open="'+st.id+'">Open river</button>');
+      m.addTo(markerLayer);
+    });
+    $('legend').innerHTML = RP_LABELS.map((l,i)=>'<span><i style="background:'+RP_COLORS[i]+'"></i>'+l+'</span>').join('')+'<span><i style="background:#b8c2c0"></i>No data</span>'+Object.entries(ADV_COLORS).map(([k,c])=>'<span><i style="background:'+c+';border-radius:2px;opacity:.6"></i>'+({2:'Streamflow advisory',3:'Flood watch',4:'Flood warning'})[k]+'</span>').join('');
+    $('mapStamp').textContent = mapMode==='fc' ? (mapData.issued ? 'Forecast issued '+mapData.issued : '') : 'Updated '+new Date(mapData.at).toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'});
+    const miss = []; if (!mapData.ok.now && mapMode==='now') miss.push('current flows'); if (!mapData.ok.fc && mapMode==='fc') miss.push('forecasts'); if (!mapData.ok.adv) miss.push('advisory areas');
+    $('mapMsg').hidden = !miss.length; $('mapMsg').textContent = miss.length ? 'Couldn’t load '+miss.join(' or ')+' just now.' : '';
+  }
+  async function openMap(){
+    try { await loadLeaflet(); } catch(e){ $('mapMsg').hidden=false; $('mapMsg').textContent='The map couldn’t load. Check your connection.'; return; }
+    if (!MAP){
+      MAP = L.map('map', { zoomControl: true, attributionControl: true }).setView([49.65, -125.6], 7);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 15, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' }).addTo(MAP);
+      MAP.on('popupopen', e => { const b = e.popup.getElement().querySelector('[data-open]'); if (b) b.addEventListener('click', ()=>{ setView('river'); selectStation(b.dataset.open, true); }); });
+    }
+    setTimeout(()=>MAP.invalidateSize(), 50);
+    if (!mapData || Date.now()-mapData.at > 15*60*1000){ $('mapStamp').textContent='Loading…'; try { await loadMapData(); } catch(e){ $('mapMsg').hidden=false; $('mapMsg').textContent='Couldn’t load the gauges just now.'; return; } }
+    drawMap();
+  }
+  document.querySelectorAll('[data-mm]').forEach(b=>b.addEventListener('click',()=>{ mapMode=b.dataset.mm; document.querySelectorAll('[data-mm]').forEach(x=>x.setAttribute('aria-pressed', String(x===b))); drawMap(); }));
+
+  // ---------- views ----------
+  let VIEW = 'river';
+  function setView(v){
+    VIEW = v;
+    $('mapView').hidden = v !== 'map'; $('riverView').hidden = v !== 'river';
+    $('tab-river').setAttribute('aria-selected', String(v==='river')); $('tab-map').setAttribute('aria-selected', String(v==='map'));
+    if (v === 'map'){ try { history.replaceState(null,'','#map'); } catch(e){} openMap(); }
+    else { try { history.replaceState(null,'','#'+S.id); } catch(e){} renderChart(); renderRain(); }
+  }
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+
+  // ---------- current conditions ----------
+  let rate = null;
+  function renderNow(){
+    const p = S.pts; if (!p.length) { renderMark(null); return; }
+    const last = p[p.length-1];
+    $('stage').innerHTML = last[1].toFixed(3)+'<small>m</small>';
+    $('stage').classList.toggle('long', last[1] >= 100);
+    $('flow').innerHTML = (last[2]!=null? last[2].toFixed(last[2]<10?2:1):'–')+'<small>m³/s</small>';
+    const h1 = nearest(last[0]-3600, 900);
+    const tr = $('trend'); rate = null;
+    if (h1 && h1[0] < last[0]){
+      rate = (last[1]-h1[1]) / ((last[0]-h1[0])/3600);
+      const cls = rate > 0.01 ? 'rise' : rate < -0.01 ? 'fall' : 'steady';
+      tr.className = 'pill '+cls;
+      tr.innerHTML = (cls==='rise'?'▲ Rising':cls==='fall'?'▼ Falling':'■ Steady')+' <span class="rate">'+(rate>=0?'+':'−')+Math.abs(rate*100).toFixed(1)+' cm/h</span>';
+    } else { tr.className='pill steady'; tr.textContent='Trend pending'; }
+    const d6 = nearest(last[0]-6*3600, 1800), d24 = nearest(last[0]-86400, 1800);
+    $('d6').textContent = d6 ? cm(last[1]-d6[1]) : '–';
+    $('d24').textContent = d24 ? cm(last[1]-d24[1]) : '–';
+    const age = Date.now()/1000 - last[0];
+    $('fresh').innerHTML = 'Reading <b>'+fmtFull(last[0])+' PST</b><br><span class="'+(age>3*3600?'stale':'')+'">'+fmtAge(age)+(age>3*3600?' · gauge may be delayed':'')+'</span>';
+    document.title = last[1].toFixed(2)+' m · '+BY_ID[S.id].name;
+    renderMark(last);
+    renderGauge(last[1]);
+  }
+
+  function renderMark(last){
+    const mk = getMark(S.id), card = $('markCard');
+    card.classList.remove('over','none');
+    if (!mk){
+      card.classList.add('none');
+      $('markLabel').textContent = 'Your mark';
+      $('markHead').textContent = 'No mark set for this river';
+      $('markMeterWrap').hidden = true;
+      $('markSub').textContent = 'Add a level you know, like a bench, a trail or the top of a rock, and this card shows how close the water is.';
+      $('markEditBtn').textContent = 'Set a mark';
+      return;
+    }
+    $('markEditBtn').textContent = 'Change mark';
+    $('markLabel').textContent = (mk.landmark ? 'Landmark: ' : 'Your mark: ')+mk.name;
+    const hh = (OUT[S.id]||{}).hist && OUT[S.id].hist.h;
+    const usual = hh && hh.typ > mk.level ? ' This river usually rises past this point at least once a winter (typical yearly high '+m2(hh.typ)+').' : '';
+    if (!last){ $('markHead').textContent = '–'; $('markMeterWrap').hidden = true; $('markSub').textContent = mk.note || ''; return; }
+    const gap = mk.level - last[1];
+    card.classList.toggle('over', gap <= 0);
+    $('markHead').textContent = gap > 0 ? (gap*100).toFixed(0)+' cm below '+mk.name : 'At or above '+mk.name+' (+'+Math.abs(gap*100).toFixed(0)+' cm)';
+    const lows = S.pts.filter(p=>p[0] >= last[0]-7*86400).map(p=>p[1]);
+    const low = Math.min(...lows, last[1]);
+    $('markMeterWrap').hidden = false;
+    const pct = mk.level > low ? Math.max(0, Math.min(100, (last[1]-low)/(mk.level-low)*100)) : 100;
+    $('markBar').style.width = pct+'%';
+    $('markLow').textContent = '7-day low '+m2(low);
+    $('markHigh').textContent = mk.name.replace(/^the /,'').replace(/^./,c=>c.toUpperCase())+' '+m2(mk.level);
+    if (gap > 0 && rate != null && rate > 0.01){
+      const hrs = gap / rate;
+      $('markSub').textContent = 'At the current rise of '+(rate*100).toFixed(1)+' cm/h, the water would reach '+mk.name+' in about '+(hrs<1?Math.round(hrs*60)+' min':hrs.toFixed(hrs<10?1:0)+' h')+' if it kept rising this fast. Rivers rarely do, so watch the trend.';
+    } else if (gap <= 0){
+      $('markSub').textContent = 'The water is at or past '+mk.name+'. Take care near the bank and check the advisory above.'+usual;
+    } else {
+      $('markSub').textContent = (mk.note || 'Your mark, saved on this device.')+usual;
+    }
+  }
+
+  // mark editor
+  function openMarkForm(){
+    const mk = getMark(S.id); const last = S.pts[S.pts.length-1];
+    $('markName').value = mk ? mk.name : 'my mark';
+    $('markLevel').value = mk ? mk.level.toFixed(2) : (last ? (last[1]+0.5).toFixed(2) : '');
+    $('markRemove').hidden = !mk;
+    $('markForm').hidden = false; $('markEditBtn').hidden = true; $('markLevel').focus();
+  }
+  function closeMarkForm(){ $('markForm').hidden = true; $('markEditBtn').hidden = false; }
+  function saveMarks(){ store.set('ir.marks', JSON.stringify(marks)); if (alertRivers.includes(S.id)) syncAlerts().catch(()=>{}); renderAlerts(); }
+  $('markEditBtn').addEventListener('click', openMarkForm);
+  $('markCancel').addEventListener('click', closeMarkForm);
+  $('markUseNow').addEventListener('click', ()=>{ const last = S.pts[S.pts.length-1]; if (last) $('markLevel').value = last[1].toFixed(2); });
+  $('markRemove').addEventListener('click', ()=>{ marks[S.id] = null; saveMarks(); closeMarkForm(); renderAll(); });
+  $('markForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const lv = parseFloat($('markLevel').value);
+    if (!isFinite(lv)) { $('markLevel').focus(); return; }
+    const name = ($('markName').value.trim() || 'my mark').slice(0,40);
+    const prev = getMark(S.id);
+    marks[S.id] = { name, level: lv, landmark: false, q: (prev && prev.q && Math.abs(prev.level-lv)<1e-9) ? prev.q : null, note: (prev && prev.note && Math.abs(prev.level-lv)<1e-9) ? prev.note : '' };
+    saveMarks(); closeMarkForm(); renderAll();
+  });
+
+  // ---------- staff gauge (auto-scaled; lake gauges can sit far above 0 m) ----------
+  function renderGauge(cur){
+    const g = $('gauge'); const mk = getMark(S.id);
+    const vals = S.pts.map(p=>p[1]); if (mk) vals.push(mk.level);
+    const hh = (OUT[S.id]||{}).hist && OUT[S.id].hist.h; if (hh) vals.push(hh.typ);
+    let lo = Math.min(cur, ...vals), hi = Math.max(cur, ...vals);
+    let bottom, top;
+    if (lo >= 0 && hi < 4) { bottom = 0; top = Math.max(3, Math.ceil(hi + 0.5)); }
+    else { const pad = Math.max(0.3, (hi-lo)*0.25); bottom = Math.floor((lo-pad)*2)/2; top = Math.ceil((hi+pad)*2)/2; }
+    const span = top - bottom;
+    const minor = span <= 4 ? 0.1 : span <= 10 ? 0.5 : 1, major = minor*5;
+    const H=260, pad=10, y = v => H-pad - ((v-bottom)/span)*(H-2*pad);
+    let s = '<rect x="30" y="'+pad+'" width="36" height="'+(H-2*pad)+'" rx="2" fill="var(--panel)" stroke="var(--line)"/>';
+    s += '<rect x="30" y="'+y(cur)+'" width="36" height="'+Math.max(0,H-pad-y(cur))+'" fill="var(--water)" opacity=".55"/>';
+    const n = Math.round(span/minor);
+    for (let i=0; i<=n; i++){
+      const v = bottom + i*minor, isMaj = Math.abs(v/major - Math.round(v/major)) < 1e-6;
+      s += '<line x1="30" x2="'+(30+(isMaj?30:12))+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--fg)" stroke-width="'+(isMaj?1.2:.7)+'" opacity="'+(isMaj?.75:.4)+'"/>';
+      if (isMaj && top < 100) s += '<text x="24" y="'+(y(v)+4)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--muted)">'+(span>10?v.toFixed(0):v.toFixed(1))+'</text>';
+    }
+    if (mk) s += '<line x1="26" x2="92" y1="'+y(mk.level)+'" y2="'+y(mk.level)+'" stroke="var(--bench)" stroke-width="2.5"/><text x="92" y="'+(y(mk.level)-4)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--bench)">mark</text>';
+    if (hh) s += '<line x1="26" x2="92" y1="'+y(hh.typ)+'" y2="'+y(hh.typ)+'" stroke="var(--hist)" stroke-width="2" stroke-dasharray="4 3"/><text x="92" y="'+(y(hh.typ)-4)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--hist)">typical</text>';
+    s += '<path d="M70 '+y(cur)+' l10 -6 v12 z" fill="var(--accent)"/>';
+    g.innerHTML = s;
+  }
+
+  // ---------- hydrograph ----------
+  function niceTicks(min, max, n){
+    const span = max-min || 1, raw = span/n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=raw);
+    const out=[]; for (let v=Math.ceil(min/step)*step; v<=max+step*1e-6; v+=step) out.push(+v.toFixed(6));
+    return out;
+  }
+  function windowPts(){
+    if (!S.pts.length) return [];
+    const end = S.pts[S.pts.length-1][0], start = end - (+S.range)*86400;
+    const w = S.pts.filter(p=>p[0]>=start);
+    const step = w.length > 1500 ? Math.ceil(w.length/1500) : 1;
+    return step===1 ? w : w.filter((p,i)=>i%step===0 || i===w.length-1);
+  }
+  let view = null;
+  function renderChart(){
+    const box = $('chartBox'), svg = $('chart');
+    const W = box.clientWidth, H = box.clientHeight;
+    if (!W || !H) return;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    const idx = S.metric==='level'?1:2;
+    const pts = windowPts().filter(p=>p[idx]!=null);
+    if (pts.length < 2){ $('offchart').hidden = true; svg.innerHTML = '<text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="var(--muted)" font-family="Barlow,sans-serif" font-size="14">'+(S.loaded?'No readings for this range.':'Loading readings…')+'</text>'; view=null; return; }
+    const L=50, R=10, T=12, B=28;
+    const t0=pts[0][0], t1=pts[pts.length-1][0];
+    const refs = refLines(S.metric);
+    let vmin=Math.min(...pts.map(p=>p[idx])), vmax=Math.max(...pts.map(p=>p[idx]));
+    const dspan = Math.max(vmax-vmin, S.metric==='level'?0.3:5);
+    // pull a reference line into view only if it sits reasonably close to the data
+    const near = refs.filter(r=>r.v <= vmax + dspan*1.2 && r.v >= vmin - dspan*0.5);
+    const far = refs.filter(r=>!near.includes(r));
+    near.forEach(r=>{ vmin=Math.min(vmin,r.v); vmax=Math.max(vmax,r.v); });
+    const padv=(vmax-vmin)*0.08 || 0.05; vmin-=padv; vmax+=padv;
+    if (S.metric==='flow') vmin=Math.max(0,vmin);
+    const yt = niceTicks(vmin, vmax, 5); vmin=Math.min(vmin,yt[0]); vmax=Math.max(vmax,yt[yt.length-1]);
+    const x = t => L + (t-t0)/(t1-t0||1)*(W-L-R);
+    const y = v => T + (1-(v-vmin)/(vmax-vmin))*(H-T-B);
+    const stepY = yt.length>1 ? yt[1]-yt[0] : 1;
+    const dec = stepY < 0.1 ? 2 : stepY < 1 ? 1 : 0;
+    let s='';
+    yt.forEach(v=>{ s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--grid)"/>';
+      s+='<text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--muted)">'+v.toFixed(dec)+'</text>'; });
+    const stepT = (t1-t0) <= 1.5*86400 ? 6*3600 : 86400;
+    const first = Math.ceil((t0+PST)/stepT)*stepT - PST;
+    const all=[]; for (let t=first; t<=t1; t+=stepT) all.push(t);
+    const every = Math.ceil(all.length/Math.max(2, Math.floor((W-L-R)/62)));
+    all.forEach((t,i)=>{ const xx=x(t);
+      s+='<line x1="'+xx+'" x2="'+xx+'" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--grid)"/>';
+      if (i%every===0) s+='<text x="'+xx+'" y="'+(H-B+17)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" fill="var(--muted)">'+(stepT<86400 && hhmm(pst(t))!=='00:00' ? hhmm(pst(t)) : fmtDay(t))+'</text>'; });
+    let d='', area='', seg=[];
+    const flush=()=>{ if(seg.length>1){ const ln=seg.map((p,i)=>(i?'L':'M')+x(p[0]).toFixed(1)+' '+y(p[idx]).toFixed(1)).join(''); d+=ln; area+=ln+'L'+x(seg[seg.length-1][0]).toFixed(1)+' '+(H-B)+'L'+x(seg[0][0]).toFixed(1)+' '+(H-B)+'Z'; } seg=[]; };
+    pts.forEach((p,i)=>{ if(i && p[0]-pts[i-1][0]>7200) flush(); seg.push(p); }); flush();
+    s+='<path d="'+area+'" fill="var(--accent-soft)"/>';
+    s+='<path d="'+d+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>';
+    near.forEach(r=>{ const by=y(r.v);
+      s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+by+'" y2="'+by+'" stroke="'+r.color+'" stroke-width="1.5"'+(r.dash?' stroke-dasharray="'+r.dash+'"':'')+'/>';
+      s+='<text x="'+(L+6)+'" y="'+(by-5)+'" font-family="IBM Plex Mono,monospace" font-size="11" fill="'+r.color+'">'+esc(r.label)+'</text>'; });
+    const offEl = $('offchart'); const above = far.filter(r=>r.v > vmax);
+    offEl.hidden = !above.length; offEl.innerHTML = above.length ? 'Above this chart: '+above.map(r=>'<span style="color:'+r.color+'">↑ '+esc(r.label)+'</span>').join(' · ') : '';
+    const lp=pts[pts.length-1];
+    s+='<circle cx="'+x(lp[0])+'" cy="'+y(lp[idx])+'" r="4.5" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/>';
+    s+='<g id="hov" visibility="hidden"><line id="hovL" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--muted)" stroke-dasharray="2 3"/><circle id="hovC" r="4" fill="var(--panel)" stroke="var(--accent)" stroke-width="2"/></g>';
+    svg.innerHTML = s;
+    svg.setAttribute('aria-label', (S.metric==='level'?'Water level':'Flow')+' over the last '+(S.range==='1'?'24 hours':S.range+' days'));
+    view = {pts, x, y, idx, L, R, W};
+  }
+  function hover(ev){
+    if (!view) return;
+    const r = $('chart').getBoundingClientRect(), mx = ev.clientX - r.left;
+    if (mx < view.L || mx > view.W - view.R) return unhover();
+    let best = view.pts[0], bd = Infinity;
+    for (const p of view.pts){ const dd = Math.abs(view.x(p[0])-mx); if (dd<bd){bd=dd;best=p;} }
+    const px=view.x(best[0]), py=view.y(best[view.idx]);
+    $('hov').setAttribute('visibility','visible'); $('hovL').setAttribute('x1',px); $('hovL').setAttribute('x2',px);
+    $('hovC').setAttribute('cx',px); $('hovC').setAttribute('cy',py);
+    const tip=$('tip'); tip.hidden=false;
+    tip.textContent = fmtFull(best[0])+' · '+best[1].toFixed(3)+' m'+(best[2]!=null?' · '+best[2].toFixed(1)+' m³/s':'');
+    const tw = tip.offsetWidth/2; tip.style.left = Math.min(Math.max(px, tw), r.width - tw)+'px'; tip.style.top = Math.max(py-10, 30)+'px';
+  }
+  function unhover(){ const h=$('hov'); if(h) h.setAttribute('visibility','hidden'); $('tip').hidden=true; }
+  $('chart').addEventListener('pointermove', hover);
+  $('chart').addEventListener('pointerdown', hover);
+  $('chart').addEventListener('pointerleave', unhover);
+
+  function renderStats(){
+    const end = S.pts.length ? S.pts[S.pts.length-1][0] : 0;
+    const pts = S.pts.filter(p=>p[0] >= end - (+S.range)*86400); if (!pts.length) return;
+    let pk=pts[0], lo=pts[0], fl=null;
+    for (const p of pts){ if(p[1]>pk[1])pk=p; if(p[1]<lo[1])lo=p; if(p[2]!=null && (!fl||p[2]>fl[2])) fl=p; }
+    $('sPeak').textContent = m2(pk[1]); $('sPeakT').textContent = fmtFull(pk[0]);
+    $('sLow').textContent = m2(lo[1]); $('sLowT').textContent = fmtFull(lo[0]);
+    $('sFlow').textContent = fl ? fl[2].toFixed(1)+' m³/s' : 'n/a'; $('sFlowT').textContent = fl ? fmtFull(fl[0]) : 'level-only gauge';
+    let best=null;
+    for (const p of pts){ const q = nearest(p[0]-3600, 600); if (q && q[0]<p[0]){ const r=(p[1]-q[1])/((p[0]-q[0])/3600); if(!best||r>best[0]) best=[r,p[0]]; } }
+    if (best && best[0]>0.005){ $('sRate').textContent='+'+(best[0]*100).toFixed(1)+' cm/h'; $('sRateT').textContent=fmtFull(best[1]); }
+    else { $('sRate').textContent='None'; $('sRateT').textContent='no rise in this range'; }
+  }
+
+  function syncButtons(){
+    document.querySelectorAll('[data-m]').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.m===S.metric)));
+    document.querySelectorAll('[data-r]').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.r===S.range)));
+  }
+  function renderAll(){ renderNow(); renderChart(); renderStats(); syncButtons(); if (S.id) renderOutlook(); }
+  function showMsg(t){ const m=$('msg'); m.hidden=!t; m.textContent=t||''; }
+
+  document.querySelectorAll('[data-m]').forEach(b=>b.addEventListener('click',()=>{ if (b.disabled) return; S.metric=b.dataset.m; store.set('er.metric',S.metric); unhover(); renderChart(); syncButtons(); }));
+  document.querySelectorAll('[data-r]').forEach(b=>b.addEventListener('click',()=>{ S.range=b.dataset.r; store.set('er.range',S.range); unhover(); syncButtons(); renderChart(); renderStats(); if (+S.range > S.loadedDays) load(+S.range); }));
+  $('refresh').addEventListener('click',()=>{ load(Math.max(1,S.loadedDays)); loadOutlook(S.id); });
+  $('share').addEventListener('click', async ()=>{
+    const st = BY_ID[S.id];
+    const data = { title: st.name, text: 'Live level for '+st.name+'.', url: location.href.split('#')[0]+'#'+S.id };
+    try { if (navigator.share) { await navigator.share(data); return; } } catch(e){ if (e && e.name==='AbortError') return; }
+    try { await navigator.clipboard.writeText(data.url); $('share').textContent='Link copied'; setTimeout(()=>$('share').textContent='Share this river',2000); } catch(e){ showMsg('Share this link: '+data.url); }
+  });
+  window.addEventListener('hashchange', ()=>{ const h = location.hash.slice(1).toUpperCase(); if (h === 'MAP') { if (VIEW !== 'map') setView('map'); return; } if (BY_ID[h]) { if (VIEW !== 'river') setView('river'); if (h !== S.id) selectStation(h, false); } });
+  new ResizeObserver(()=>{ renderChart(); renderRain(); }).observe($('chartBox'));
+
+  setInterval(()=>{ if (document.visibilityState==='visible') load(1); }, REFRESH_MS);
+  setInterval(()=>{ if (document.visibilityState==='visible') { loadOutlook(S.id); if (VIEW==='map') { mapData=null; openMap(); } } }, 15*60*1000);
+  setInterval(()=>{ if (document.visibilityState==='visible') loadRain(S.id); }, 30*60*1000);
+  document.addEventListener('visibilitychange',()=>{ if (document.visibilityState==='visible' && Date.now()-S.lastFetch > 60000) load(1); });
+  setInterval(()=>{ if (S.pts.length) renderNow(); }, 60000);
+
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone && !store.get('er.installHidden')) $('install').hidden = false;
+  $('installClose').addEventListener('click',()=>{ $('install').hidden=true; store.set('er.installHidden','1'); });
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+  // Visitor counting (optional): set this to your GoatCounter code, e.g. 'islandrivers', to switch it on.
+  const GOATCOUNTER_CODE = '';
+  if (GOATCOUNTER_CODE && /^[a-z0-9-]+$/.test(GOATCOUNTER_CODE)) { const g = document.createElement('script'); g.async = true; g.src = 'https://gc.zgo.at/count.js'; g.dataset.goatcounter = 'https://'+GOATCOUNTER_CODE+'.goatcounter.com/count'; document.head.appendChild(g); }
+
+  // start: link (#id) > first bookmark > last viewed > Englishman River
+  const fromHash = location.hash.slice(1).toUpperCase();
+  const start = BY_ID[fromHash] ? fromHash : (favs.find(id=>BY_ID[id]) || (BY_ID[store.get('ir.last')] ? store.get('ir.last') : '08HB002'));
+  buildPicker();
+  selectStation(start, !BY_ID[fromHash] && fromHash !== 'MAP');
+  if (fromHash === 'MAP') setView('map');
+  initAlerts();
+})();
+</script>
+</body>
+</html>
