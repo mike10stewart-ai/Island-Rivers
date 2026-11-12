@@ -92,11 +92,6 @@ h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,7vw,40px);lin
 .trio .v{font-family:var(--display);font-weight:600;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
 .trio .n{font-size:12px;color:var(--muted);font-family:var(--mono)}
 .rain-chart{width:100%;height:90px;display:block}
-.tide-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
-.tide{border:1px solid var(--line);border-radius:8px;padding:8px 10px}
-.tide b{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums}
-.tide.peak{border-color:var(--a3);background:var(--a3-bg)}
-.tide .n{font-size:12px;color:var(--muted);font-family:var(--mono)}
 .map{height:min(68vh,560px);border-radius:12px;border:1px solid var(--line);overflow:hidden;background:var(--panel)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;font-family:var(--mono);color:var(--muted)}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
@@ -223,11 +218,6 @@ footer a{color:var(--accent)}
     <div class="fineprint" id="rainFine">Modelled rain at the gauge location. Mountains upstream usually get more.</div>
   </section>
 
-  <section class="card" id="tideCard" hidden aria-label="Tides">
-    <div class="k">Tides at <span id="tideStn">–</span> · Fisheries and Oceans Canada</div>
-    <div class="tide-list" id="tideList"></div>
-    <div class="fineprint">The lower river backs up most when a high tide meets high flow. These are predicted tides; storms and low pressure can push water higher.</div>
-  </section>
 
   <section class="mark-card" id="markCard" aria-label="Distance to your mark">
     <div class="k" style="color:inherit;opacity:.8" id="markLabel">Your mark</div>
@@ -306,7 +296,7 @@ footer a{color:var(--accent)}
   <footer>
     <span>Readings every 5 minutes in Pacific Standard Time, refreshed automatically while the app is open. Gauges report with up to a 2 hour delay. Lake and reservoir gauges measure water level only, and reservoir levels are controlled by BC Hydro.</span>
     <span>Marks and bookmarks are saved on this device only. The Englishman River bench landmark (about 2.45 m, 134 m³/s) is estimated from the December 2025 high water, when the river came up to just below the bench. Marks are a guide, not official flood levels.</span>
-    <span>Rain: Environment Canada GEM model via Open-Meteo. Tides: Fisheries and Oceans Canada predictions. Map: © OpenStreetMap contributors.</span>
+    <span>Rain: Environment Canada GEM model via Open-Meteo. Map: © OpenStreetMap contributors.</span>
     <span>Advisories, return periods and 5-day forecasts: BC River Forecast Centre. Typical and record highs: Environment Canada yearly peak records (typical = median of yearly peaks).</span>
     <span>Data: Environment and Climate Change Canada, Water Survey of Canada. Provisional real-time data, subject to revision. <a id="official" href="https://wateroffice.ec.gc.ca/report/real_time_e.html?stn=08HB002" target="_blank" rel="noopener">Official station page</a></span>
   </footer>
@@ -343,7 +333,6 @@ footer a{color:var(--accent)}
   ];
   const LAKES = ['08HA009','08HB082','08HC006','08HD025','08HD026','08HD031','08HD033','08HD034'];
   const TIDAL = ['08HB083','08HD022','08HD024'];
-  const COASTAL = ['08HB002','08HB029','08HB032','08HB034','08HB006','08HB011','08HB083','08HD035','08HD022','08HD024','08HD011','08HD023','08HA011','08HA003','08HA001','08HB017','08HA010','08HC001','08HE006','08HD006','08HB086','08HB014'];
   const REGIONS = [
     ['Lakes & reservoirs', id => LAKES.includes(id)],
     ['South Island & Cowichan', id => /^08HA/.test(id)],
@@ -422,7 +411,6 @@ footer a{color:var(--accent)}
     if (!OUT[id] || Date.now()-OUT[id].at > 15*60*1000) loadOutlook(id);
     $('tidalNote').hidden = !TIDAL.includes(id);
     if (!RAIN[id] || Date.now()-RAIN[id].at > 30*60*1000) loadRain(id); else renderRain();
-    if (!TIDES[id] || Date.now()-(TIDES[id].at||0) > 6*3600*1000) loadTides(id); else renderTides();
     renderAlerts();
   }
   function clearView(){
@@ -630,46 +618,6 @@ footer a{color:var(--accent)}
     s += '<text x="'+(W-2)+'" y="10" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--muted)">max '+max.toFixed(1)+' mm/h</text>';
     for (let d=0; d<=3; d++){ const tx = t0 + d*86400; const lx = x(tx); s += '<text x="'+Math.min(Math.max(lx,14),W-14)+'" y="'+(H-3)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="10" fill="var(--muted)">'+(d===1?'now':(d<1?'−24 h':'+'+((d-1)*24)+' h'))+'</text>'; }
     svg.innerHTML = s;
-  }
-
-  // ---------- tides for river mouths (Fisheries and Oceans Canada IWLS) ----------
-  const IWLS = 'https://api-iwls.dfo-mpo.gc.ca/api/v1/';
-  const TIDES = {};
-  async function tideStations(){
-    const c = store.json('ir.tideStations', null);
-    if (c && Date.now()-c.at < 30*86400e3) return c.list;
-    const j = await getJSON(IWLS+'stations?chs-region-code=PAC');
-    const list = (Array.isArray(j)?j:[]).filter(st => (st.timeSeries||[]).some(t => (typeof t === 'string' ? t : t && t.code) === 'wlp-hilo'))
-      .map(st => ({ id: st.id, name: st.officialName, lat: +st.latitude, lon: +st.longitude }));
-    store.set('ir.tideStations', JSON.stringify({ at: Date.now(), list }));
-    return list;
-  }
-  const km = (a,b,c,d) => { const R=6371, r=Math.PI/180, dl=(c-a)*r, dn=(d-b)*r; const h=Math.sin(dl/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
-  async function loadTides(id){
-    const tok = S.token;
-    if (!COASTAL.includes(id)){ TIDES[id] = { none: true }; if (tok===S.token) renderTides(); return; }
-    try {
-      const [c, list] = await Promise.all([coordsFor(id), tideStations()]);
-      let best = null, bd = Infinity;
-      list.forEach(t=>{ const d = km(c[1],c[0],t.lat,t.lon); if (d<bd){ bd=d; best=t; } });
-      if (!best || bd > 45) { TIDES[id] = { none: true }; }
-      else {
-        const from = new Date(Date.now()-3*3600e3).toISOString().slice(0,19)+'Z', to = new Date(Date.now()+48*3600e3).toISOString().slice(0,19)+'Z';
-        const j = await getJSON(IWLS+'stations/'+best.id+'/data?time-series-code=wlp-hilo&from='+from+'&to='+to);
-        const ev = (Array.isArray(j)?j:[]).map(e=>[Math.round(Date.parse(e.eventDate)/1000), +e.value]).sort((a,b)=>a[0]-b[0]);
-        TIDES[id] = { at: Date.now(), station: best.name, events: ev.map((e,i)=>{ const p=ev[i-1], n=ev[i+1]; const hi = (p? e[1]>p[1] : true) && (n? e[1]>n[1] : true); return { t:e[0], v:e[1], hi: p||n ? hi : true }; }) };
-      }
-    } catch(e){ TIDES[id] = { error: true }; }
-    if (tok === S.token) renderTides();
-  }
-  function renderTides(){
-    const T = TIDES[S.id], card = $('tideCard');
-    if (!T || T.none || T.error || !T.events || !T.events.length){ card.hidden = true; return; }
-    card.hidden = false;
-    $('tideStn').textContent = pretty(T.station||'');
-    const now = Date.now()/1000, ev = T.events.filter(e=>e.t >= now-1800).slice(0,6);
-    const top = Math.max(...ev.filter(e=>e.hi).map(e=>e.v));
-    $('tideList').innerHTML = ev.map(e=>'<div class="tide'+(e.hi && e.v===top?' peak':'')+'"><div class="n">'+(e.hi?'High':'Low')+' · '+esc(fmtFull(e.t))+'</div><b>'+e.v.toFixed(1)+' m</b>'+(e.hi && e.v===top?'<div class="n">highest in 48 h</div>':'')+'</div>').join('');
   }
 
   // ---------- push alerts (needs the server functions; hidden on a plain static deploy) ----------
