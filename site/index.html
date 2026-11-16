@@ -188,56 +188,6 @@ footer a{color:var(--accent)}
 
   <div class="msg" id="msg" hidden></div>
 
-  <section class="adv" id="adv" hidden aria-live="polite">
-    <b id="advLevel"></b>
-    <span id="advText"></span>
-    <a id="advLink" href="https://bcrfc.env.gov.bc.ca/warnings/index.htm" target="_blank" rel="noopener">Read the River Forecast Centre bulletin</a>
-  </section>
-  <div class="adv-none" id="advNone" hidden></div>
-
-  <section class="fc" id="fc" aria-label="Five day outlook">
-    <div class="k">Next 5 days · BC River Forecast Centre model</div>
-    <div class="fc-head" id="fcHead">Loading forecast…</div>
-    <div class="fc-sub" id="fcSub"></div>
-    <div class="fc-sub fc-mark" id="fcMark" hidden></div>
-    <div class="hist" id="hist" hidden>
-      <div><div class="k">Typical yearly high</div><div class="v" id="hTyp">–</div><div class="n" id="hTypN">&nbsp;</div></div>
-      <div><div class="k">Record high</div><div class="v" id="hRec">–</div><div class="n" id="hRecN">&nbsp;</div></div>
-    </div>
-    <div class="fineprint" id="fcFine">Forecasts are model guidance and can be off in either direction. The Forecast Centre’s return periods and Environment Canada’s yearly peak records are calculated differently, so they won’t always agree. Follow official advisories and local emergency instructions.</div>
-  </section>
-
-  <section class="card" id="rainCard" aria-label="Rain">
-    <div class="k">Rain near the gauge · Environment Canada GEM model</div>
-    <div class="trio">
-      <div><div class="v" id="rPast">–</div><div class="n">last 24 h</div></div>
-      <div><div class="v" id="rNext24">–</div><div class="n">next 24 h</div></div>
-      <div><div class="v" id="rNext48">–</div><div class="n">next 48 h</div></div>
-    </div>
-    <svg id="rainChart" class="rain-chart" role="img" aria-label="Hourly rain, past 24 hours and next 48 hours"></svg>
-    <div class="fineprint" id="rainFine">Modelled rain at the gauge location. Mountains upstream usually get more.</div>
-  </section>
-
-
-  <section class="mark-card" id="markCard" aria-label="Distance to your mark">
-    <div class="k" style="color:inherit;opacity:.8" id="markLabel">Your mark</div>
-    <div class="mark-head" id="markHead">–</div>
-    <div id="markMeterWrap">
-      <div class="meter" aria-hidden="true"><i id="markBar" style="width:0"></i></div>
-      <div class="meter-scale" style="margin-top:6px"><span id="markLow">–</span><span id="markHigh">–</span></div>
-    </div>
-    <div class="mark-sub" id="markSub"></div>
-    <button class="linkbtn" id="markEditBtn" type="button">Change mark</button>
-    <form class="mark-edit" id="markForm" hidden>
-      <label for="markName">Name it<input id="markName" type="text" maxlength="40" placeholder="e.g. the bench"></label>
-      <label for="markLevel">Level (m)<input id="markLevel" type="number" step="0.01" inputmode="decimal"></label>
-      <button class="btn" type="button" id="markUseNow">Use current level</button>
-      <button class="btn primary" type="submit">Save</button>
-      <button class="btn" type="button" id="markRemove">Remove</button>
-      <button class="btn" type="button" id="markCancel">Cancel</button>
-    </form>
-  </section>
-
   <section class="hero" aria-label="Current conditions">
     <div class="hero-main">
       <div>
@@ -277,6 +227,56 @@ footer a{color:var(--accent)}
     <div class="stat"><div class="k">Low in range</div><div class="v" id="sLow">–</div><div class="n" id="sLowT">&nbsp;</div></div>
     <div class="stat"><div class="k">Peak flow</div><div class="v" id="sFlow">–</div><div class="n" id="sFlowT">&nbsp;</div></div>
     <div class="stat"><div class="k">Fastest rise</div><div class="v" id="sRate">–</div><div class="n" id="sRateT">&nbsp;</div></div>
+  </section>
+
+  <section class="card" id="rainCard" aria-label="Rain">
+    <div class="k">Rain near the gauge · Environment Canada GEM model</div>
+    <div class="trio">
+      <div><div class="v" id="rPast">–</div><div class="n">last 24 h</div></div>
+      <div><div class="v" id="rNext24">–</div><div class="n">next 24 h</div></div>
+      <div><div class="v" id="rNext48">–</div><div class="n">next 48 h</div></div>
+    </div>
+    <svg id="rainChart" class="rain-chart" role="img" aria-label="Hourly rain, past 24 hours and next 48 hours"></svg>
+    <div class="fineprint" id="rainFine">Modelled rain at the gauge location. Mountains upstream usually get more.</div>
+  </section>
+
+
+  <section class="mark-card" id="markCard" aria-label="Distance to your mark">
+    <div class="k" style="color:inherit;opacity:.8" id="markLabel">Your mark</div>
+    <div class="mark-head" id="markHead">–</div>
+    <div id="markMeterWrap">
+      <div class="meter" aria-hidden="true"><i id="markBar" style="width:0"></i></div>
+      <div class="meter-scale" style="margin-top:6px"><span id="markLow">–</span><span id="markHigh">–</span></div>
+    </div>
+    <div class="mark-sub" id="markSub"></div>
+    <button class="linkbtn" id="markEditBtn" type="button">Change mark</button>
+    <form class="mark-edit" id="markForm" hidden>
+      <label for="markName">Name it<input id="markName" type="text" maxlength="40" placeholder="e.g. the bench"></label>
+      <label for="markLevel">Level (m)<input id="markLevel" type="number" step="0.01" inputmode="decimal"></label>
+      <button class="btn" type="button" id="markUseNow">Use current level</button>
+      <button class="btn primary" type="submit">Save</button>
+      <button class="btn" type="button" id="markRemove">Remove</button>
+      <button class="btn" type="button" id="markCancel">Cancel</button>
+    </form>
+  </section>
+
+  <section class="adv" id="adv" hidden aria-live="polite">
+    <b id="advLevel"></b>
+    <span id="advText"></span>
+    <a id="advLink" href="https://bcrfc.env.gov.bc.ca/warnings/index.htm" target="_blank" rel="noopener">Read the River Forecast Centre bulletin</a>
+  </section>
+  <div class="adv-none" id="advNone" hidden></div>
+
+  <section class="fc" id="fc" aria-label="Five day outlook">
+    <div class="k">Next 5 days · BC River Forecast Centre model</div>
+    <div class="fc-head" id="fcHead">Loading forecast…</div>
+    <div class="fc-sub" id="fcSub"></div>
+    <div class="fc-sub fc-mark" id="fcMark" hidden></div>
+    <div class="hist" id="hist" hidden>
+      <div><div class="k">Typical yearly high</div><div class="v" id="hTyp">–</div><div class="n" id="hTypN">&nbsp;</div></div>
+      <div><div class="k">Record high</div><div class="v" id="hRec">–</div><div class="n" id="hRecN">&nbsp;</div></div>
+    </div>
+    <div class="fineprint" id="fcFine">Forecasts are model guidance and can be off in either direction. The Forecast Centre’s return periods and Environment Canada’s yearly peak records are calculated differently, so they won’t always agree. Follow official advisories and local emergency instructions.</div>
   </section>
 
   <section class="card" id="alertCard" hidden aria-label="Alerts">
