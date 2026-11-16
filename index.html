@@ -92,11 +92,6 @@ h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,7vw,40px);lin
 .trio .v{font-family:var(--display);font-weight:600;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
 .trio .n{font-size:12px;color:var(--muted);font-family:var(--mono)}
 .rain-chart{width:100%;height:90px;display:block}
-.tide-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
-.tide{border:1px solid var(--line);border-radius:8px;padding:8px 10px}
-.tide b{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums}
-.tide.peak{border-color:var(--a3);background:var(--a3-bg)}
-.tide .n{font-size:12px;color:var(--muted);font-family:var(--mono)}
 .map{height:min(68vh,560px);border-radius:12px;border:1px solid var(--line);overflow:hidden;background:var(--panel)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;font-family:var(--mono);color:var(--muted)}
 .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
@@ -104,8 +99,6 @@ h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,7vw,40px);lin
 .leaflet-popup-content{font:14px/1.4 var(--body)}
 .leaflet-popup-content b{font-size:15px}
 .popbtn{margin-top:6px;font:600 13px var(--body);padding:6px 10px;border-radius:6px;border:0;background:#0d7482;color:#fff;cursor:pointer}
-.prep ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:14px}
-.prep a{color:var(--accent)}
 .hero{display:grid;grid-template-columns:1fr auto;gap:18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
 .hero-main{min-width:0;display:flex;flex-direction:column;gap:12px}
 .k{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
@@ -171,7 +164,7 @@ footer a{color:var(--accent)}
     <div class="adv-none" id="mapMsg" hidden></div>
     <div id="map" class="map" role="application" aria-label="Map of Vancouver Island river gauges"></div>
     <div class="legend" id="legend"></div>
-    <div class="fineprint">Each dot is a gauge, coloured by how unusual its flow is (return period from the BC River Forecast Centre). Shaded areas have an active advisory. Tap a dot to open that river.</div>
+    <div class="fineprint">Each dot is a gauge, coloured by how unusual its flow is (return period from the BC River Forecast Centre). Tap a dot to open that river and see any active advisory.</div>
   </section>
 
   <div id="riverView" style="display:flex;flex-direction:column;gap:16px">
@@ -194,61 +187,6 @@ footer a{color:var(--accent)}
   </div>
 
   <div class="msg" id="msg" hidden></div>
-
-  <section class="adv" id="adv" hidden aria-live="polite">
-    <b id="advLevel"></b>
-    <span id="advText"></span>
-    <a id="advLink" href="https://bcrfc.env.gov.bc.ca/warnings/index.htm" target="_blank" rel="noopener">Read the River Forecast Centre bulletin</a>
-  </section>
-  <div class="adv-none" id="advNone" hidden></div>
-
-  <section class="fc" id="fc" aria-label="Five day outlook">
-    <div class="k">Next 5 days · BC River Forecast Centre model</div>
-    <div class="fc-head" id="fcHead">Loading forecast…</div>
-    <div class="fc-sub" id="fcSub"></div>
-    <div class="fc-sub fc-mark" id="fcMark" hidden></div>
-    <div class="hist" id="hist" hidden>
-      <div><div class="k">Typical yearly high</div><div class="v" id="hTyp">–</div><div class="n" id="hTypN">&nbsp;</div></div>
-      <div><div class="k">Record high</div><div class="v" id="hRec">–</div><div class="n" id="hRecN">&nbsp;</div></div>
-    </div>
-    <div class="fineprint" id="fcFine">Forecasts are model guidance and can be off in either direction. The Forecast Centre’s return periods and Environment Canada’s yearly peak records are calculated differently, so they won’t always agree. Follow official advisories and local emergency instructions.</div>
-  </section>
-
-  <section class="card" id="rainCard" aria-label="Rain">
-    <div class="k">Rain near the gauge · Environment Canada GEM model</div>
-    <div class="trio">
-      <div><div class="v" id="rPast">–</div><div class="n">last 24 h</div></div>
-      <div><div class="v" id="rNext24">–</div><div class="n">next 24 h</div></div>
-      <div><div class="v" id="rNext48">–</div><div class="n">next 48 h</div></div>
-    </div>
-    <svg id="rainChart" class="rain-chart" role="img" aria-label="Hourly rain, past 24 hours and next 48 hours"></svg>
-    <div class="fineprint" id="rainFine">Modelled rain at the gauge location. Mountains upstream usually get more.</div>
-  </section>
-
-  <section class="card" id="tideCard" hidden aria-label="Tides">
-    <div class="k">Tides at <span id="tideStn">–</span> · Fisheries and Oceans Canada</div>
-    <div class="tide-list" id="tideList"></div>
-    <div class="fineprint">The lower river backs up most when a high tide meets high flow. These are predicted tides; storms and low pressure can push water higher.</div>
-  </section>
-
-  <section class="mark-card" id="markCard" aria-label="Distance to your mark">
-    <div class="k" style="color:inherit;opacity:.8" id="markLabel">Your mark</div>
-    <div class="mark-head" id="markHead">–</div>
-    <div id="markMeterWrap">
-      <div class="meter" aria-hidden="true"><i id="markBar" style="width:0"></i></div>
-      <div class="meter-scale" style="margin-top:6px"><span id="markLow">–</span><span id="markHigh">–</span></div>
-    </div>
-    <div class="mark-sub" id="markSub"></div>
-    <button class="linkbtn" id="markEditBtn" type="button">Change mark</button>
-    <form class="mark-edit" id="markForm" hidden>
-      <label for="markName">Name it<input id="markName" type="text" maxlength="40" placeholder="e.g. the bench"></label>
-      <label for="markLevel">Level (m)<input id="markLevel" type="number" step="0.01" inputmode="decimal"></label>
-      <button class="btn" type="button" id="markUseNow">Use current level</button>
-      <button class="btn primary" type="submit">Save</button>
-      <button class="btn" type="button" id="markRemove">Remove</button>
-      <button class="btn" type="button" id="markCancel">Cancel</button>
-    </form>
-  </section>
 
   <section class="hero" aria-label="Current conditions">
     <div class="hero-main">
@@ -291,6 +229,56 @@ footer a{color:var(--accent)}
     <div class="stat"><div class="k">Fastest rise</div><div class="v" id="sRate">–</div><div class="n" id="sRateT">&nbsp;</div></div>
   </section>
 
+  <section class="card" id="rainCard" aria-label="Rain">
+    <div class="k">Rain near the gauge · Environment Canada GEM model</div>
+    <div class="trio">
+      <div><div class="v" id="rPast">–</div><div class="n">last 24 h</div></div>
+      <div><div class="v" id="rNext24">–</div><div class="n">next 24 h</div></div>
+      <div><div class="v" id="rNext48">–</div><div class="n">next 48 h</div></div>
+    </div>
+    <svg id="rainChart" class="rain-chart" role="img" aria-label="Hourly rain, past 24 hours and next 48 hours"></svg>
+    <div class="fineprint" id="rainFine">Modelled rain at the gauge location. Mountains upstream usually get more.</div>
+  </section>
+
+
+  <section class="mark-card" id="markCard" aria-label="Distance to your mark">
+    <div class="k" style="color:inherit;opacity:.8" id="markLabel">Your mark</div>
+    <div class="mark-head" id="markHead">–</div>
+    <div id="markMeterWrap">
+      <div class="meter" aria-hidden="true"><i id="markBar" style="width:0"></i></div>
+      <div class="meter-scale" style="margin-top:6px"><span id="markLow">–</span><span id="markHigh">–</span></div>
+    </div>
+    <div class="mark-sub" id="markSub"></div>
+    <button class="linkbtn" id="markEditBtn" type="button">Change mark</button>
+    <form class="mark-edit" id="markForm" hidden>
+      <label for="markName">Name it<input id="markName" type="text" maxlength="40" placeholder="e.g. the bench"></label>
+      <label for="markLevel">Level (m)<input id="markLevel" type="number" step="0.01" inputmode="decimal"></label>
+      <button class="btn" type="button" id="markUseNow">Use current level</button>
+      <button class="btn primary" type="submit">Save</button>
+      <button class="btn" type="button" id="markRemove">Remove</button>
+      <button class="btn" type="button" id="markCancel">Cancel</button>
+    </form>
+  </section>
+
+  <section class="adv" id="adv" hidden aria-live="polite">
+    <b id="advLevel"></b>
+    <span id="advText"></span>
+    <a id="advLink" href="https://bcrfc.env.gov.bc.ca/warnings/index.htm" target="_blank" rel="noopener">Read the River Forecast Centre bulletin</a>
+  </section>
+  <div class="adv-none" id="advNone" hidden></div>
+
+  <section class="fc" id="fc" aria-label="Five day outlook">
+    <div class="k">Next 5 days · BC River Forecast Centre model</div>
+    <div class="fc-head" id="fcHead">Loading forecast…</div>
+    <div class="fc-sub" id="fcSub"></div>
+    <div class="fc-sub fc-mark" id="fcMark" hidden></div>
+    <div class="hist" id="hist" hidden>
+      <div><div class="k">Typical yearly high</div><div class="v" id="hTyp">–</div><div class="n" id="hTypN">&nbsp;</div></div>
+      <div><div class="k">Record high</div><div class="v" id="hRec">–</div><div class="n" id="hRecN">&nbsp;</div></div>
+    </div>
+    <div class="fineprint" id="fcFine">Forecasts are model guidance and can be off in either direction. The Forecast Centre’s return periods and Environment Canada’s yearly peak records are calculated differently, so they won’t always agree. Follow official advisories and local emergency instructions.</div>
+  </section>
+
   <section class="card" id="alertCard" hidden aria-label="Alerts">
     <div class="k">Alerts for this river</div>
     <div id="alertText">Get a notification when the River Forecast Centre issues or eases an advisory here, or when the water reaches your mark.</div>
@@ -304,21 +292,10 @@ footer a{color:var(--accent)}
   </div>
   </div>
 
-  <section class="card prep" aria-label="Be prepared">
-    <div class="k">Be prepared</div>
-    <ul>
-      <li>Sign up for local emergency alerts: <a href="https://rdn.bc.ca/emergency-alerts" target="_blank" rel="noopener">Regional District of Nanaimo</a> · <a href="https://www.comoxvalleyrd.ca/node/8722" target="_blank" rel="noopener">Comox Valley Regional District</a> · <a href="https://campbellriver.ca/emergencies" target="_blank" rel="noopener">Campbell River (Alertable)</a>. Elsewhere, check your regional district’s website.</li>
-      <li><a href="https://bcrfc.env.gov.bc.ca/warnings/index.htm" target="_blank" rel="noopener">BC River Forecast Centre advisories</a></li>
-      <li><a href="https://www.emergencyinfobc.gov.bc.ca/" target="_blank" rel="noopener">EmergencyInfoBC</a> for evacuation orders and official updates</li>
-      <li><a href="https://www.drivebc.ca/" target="_blank" rel="noopener">DriveBC</a> for road closures and flooding on highways</li>
-    </ul>
-  </section>
 
   <footer>
     <span>Readings every 5 minutes in Pacific Standard Time, refreshed automatically while the app is open. Gauges report with up to a 2 hour delay. Lake and reservoir gauges measure water level only, and reservoir levels are controlled by BC Hydro.</span>
-    <span>Marks and bookmarks are saved on this device only. The Englishman River bench landmark (about 2.45 m, 134 m³/s) is estimated from the December 2025 high water, when the river came up to just below the bench. Marks are a guide, not official flood levels.</span>
-    <span>Rain: Environment Canada GEM model via Open-Meteo. Tides: Fisheries and Oceans Canada predictions. Map: © OpenStreetMap contributors.</span>
-    <span>Advisories, return periods and 5-day forecasts: BC River Forecast Centre. Typical and record highs: Environment Canada yearly peak records (typical = median of yearly peaks).</span>
+    <span>Rain: Environment Canada GEM model via Open-Meteo. Map: © OpenStreetMap contributors.</span>
     <span>Data: Environment and Climate Change Canada, Water Survey of Canada. Provisional real-time data, subject to revision. <a id="official" href="https://wateroffice.ec.gc.ca/report/real_time_e.html?stn=08HB002" target="_blank" rel="noopener">Official station page</a></span>
   </footer>
 </div>
@@ -354,7 +331,6 @@ footer a{color:var(--accent)}
   ];
   const LAKES = ['08HA009','08HB082','08HC006','08HD025','08HD026','08HD031','08HD033','08HD034'];
   const TIDAL = ['08HB083','08HD022','08HD024'];
-  const COASTAL = ['08HB002','08HB029','08HB032','08HB034','08HB006','08HB011','08HB083','08HD035','08HD022','08HD024','08HD011','08HD023','08HA011','08HA003','08HA001','08HB017','08HA010','08HC001','08HE006','08HD006','08HB086','08HB014'];
   const REGIONS = [
     ['Lakes & reservoirs', id => LAKES.includes(id)],
     ['South Island & Cowichan', id => /^08HA/.test(id)],
@@ -433,7 +409,6 @@ footer a{color:var(--accent)}
     if (!OUT[id] || Date.now()-OUT[id].at > 15*60*1000) loadOutlook(id);
     $('tidalNote').hidden = !TIDAL.includes(id);
     if (!RAIN[id] || Date.now()-RAIN[id].at > 30*60*1000) loadRain(id); else renderRain();
-    if (!TIDES[id] || Date.now()-(TIDES[id].at||0) > 6*3600*1000) loadTides(id); else renderTides();
     renderAlerts();
   }
   function clearView(){
@@ -643,46 +618,6 @@ footer a{color:var(--accent)}
     svg.innerHTML = s;
   }
 
-  // ---------- tides for river mouths (Fisheries and Oceans Canada IWLS) ----------
-  const IWLS = 'https://api-iwls.dfo-mpo.gc.ca/api/v1/';
-  const TIDES = {};
-  async function tideStations(){
-    const c = store.json('ir.tideStations', null);
-    if (c && Date.now()-c.at < 30*86400e3) return c.list;
-    const j = await getJSON(IWLS+'stations?chs-region-code=PAC');
-    const list = (Array.isArray(j)?j:[]).filter(st => (st.timeSeries||[]).some(t => (typeof t === 'string' ? t : t && t.code) === 'wlp-hilo'))
-      .map(st => ({ id: st.id, name: st.officialName, lat: +st.latitude, lon: +st.longitude }));
-    store.set('ir.tideStations', JSON.stringify({ at: Date.now(), list }));
-    return list;
-  }
-  const km = (a,b,c,d) => { const R=6371, r=Math.PI/180, dl=(c-a)*r, dn=(d-b)*r; const h=Math.sin(dl/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
-  async function loadTides(id){
-    const tok = S.token;
-    if (!COASTAL.includes(id)){ TIDES[id] = { none: true }; if (tok===S.token) renderTides(); return; }
-    try {
-      const [c, list] = await Promise.all([coordsFor(id), tideStations()]);
-      let best = null, bd = Infinity;
-      list.forEach(t=>{ const d = km(c[1],c[0],t.lat,t.lon); if (d<bd){ bd=d; best=t; } });
-      if (!best || bd > 45) { TIDES[id] = { none: true }; }
-      else {
-        const from = new Date(Date.now()-3*3600e3).toISOString().slice(0,19)+'Z', to = new Date(Date.now()+48*3600e3).toISOString().slice(0,19)+'Z';
-        const j = await getJSON(IWLS+'stations/'+best.id+'/data?time-series-code=wlp-hilo&from='+from+'&to='+to);
-        const ev = (Array.isArray(j)?j:[]).map(e=>[Math.round(Date.parse(e.eventDate)/1000), +e.value]).sort((a,b)=>a[0]-b[0]);
-        TIDES[id] = { at: Date.now(), station: best.name, events: ev.map((e,i)=>{ const p=ev[i-1], n=ev[i+1]; const hi = (p? e[1]>p[1] : true) && (n? e[1]>n[1] : true); return { t:e[0], v:e[1], hi: p||n ? hi : true }; }) };
-      }
-    } catch(e){ TIDES[id] = { error: true }; }
-    if (tok === S.token) renderTides();
-  }
-  function renderTides(){
-    const T = TIDES[S.id], card = $('tideCard');
-    if (!T || T.none || T.error || !T.events || !T.events.length){ card.hidden = true; return; }
-    card.hidden = false;
-    $('tideStn').textContent = pretty(T.station||'');
-    const now = Date.now()/1000, ev = T.events.filter(e=>e.t >= now-1800).slice(0,6);
-    const top = Math.max(...ev.filter(e=>e.hi).map(e=>e.v));
-    $('tideList').innerHTML = ev.map(e=>'<div class="tide'+(e.hi && e.v===top?' peak':'')+'"><div class="n">'+(e.hi?'High':'Low')+' · '+esc(fmtFull(e.t))+'</div><b>'+e.v.toFixed(1)+' m</b>'+(e.hi && e.v===top?'<div class="n">highest in 48 h</div>':'')+'</div>').join('');
-  }
-
   // ---------- push alerts (needs the server functions; hidden on a plain static deploy) ----------
   let alertKey = null;
   let alertRivers = store.json('ir.alerts', []); if (!Array.isArray(alertRivers)) alertRivers = [];
@@ -761,8 +696,7 @@ footer a{color:var(--accent)}
     const [coords, now, fc, adv] = await Promise.all([
       allCoords(),
       agoQuery('StationInformation', { where: "Station_ID like '08H%'", outFields:'Station_ID,Return_Period,Current_Reading_' }).catch(()=>null),
-      agoQuery('coffee_MapHub_forecast', { where: "Station_ID like '08H%'", outFields:'Station_ID,ReturnPeriodAve,Forecast_average_in_5_days,Issued_at' }).catch(()=>null),
-      getJSON(AGO+'BC_Flood_Advisory_and_Warning_Notifications_(Public_View)/FeatureServer/0/query?'+new URLSearchParams({ where:'Advisory>=2', outFields:'Advisory,Major_Basin,Comments', returnGeometry:'true', outSR:'4326', maxAllowableOffset:'0.01', geometryPrecision:'4', f:'geojson' })).catch(()=>null)
+      agoQuery('coffee_MapHub_forecast', { where: "Station_ID like '08H%'", outFields:'Station_ID,ReturnPeriodAve,Forecast_average_in_5_days,Issued_at' }).catch(()=>null)
     ]);
     const byNow = {}, byFc = {}; let issued = '';
     ((now&&now.features)||[]).forEach(f=>{ byNow[f.attributes.Station_ID] = f.attributes; });
@@ -787,9 +721,9 @@ footer a{color:var(--accent)}
       m.bindPopup('<b>'+esc(st.name)+'</b><br>'+(k>=0 ? esc(RP_LABELS[k])+' flow'+(mapMode==='fc'?' (forecast)':'')+'<br>' : '')+detail+'<br><button class="popbtn" data-open="'+st.id+'">Open river</button>');
       m.addTo(markerLayer);
     });
-    $('legend').innerHTML = RP_LABELS.map((l,i)=>'<span><i style="background:'+RP_COLORS[i]+'"></i>'+l+'</span>').join('')+'<span><i style="background:#b8c2c0"></i>No data</span>'+Object.entries(ADV_COLORS).map(([k,c])=>'<span><i style="background:'+c+';border-radius:2px;opacity:.6"></i>'+({2:'Streamflow advisory',3:'Flood watch',4:'Flood warning'})[k]+'</span>').join('');
+    $('legend').innerHTML = RP_LABELS.map((l,i)=>'<span><i style="background:'+RP_COLORS[i]+'"></i>'+l+'</span>').join('')+'<span><i style="background:#b8c2c0"></i>No data</span>';
     $('mapStamp').textContent = mapMode==='fc' ? (mapData.issued ? 'Forecast issued '+mapData.issued : '') : 'Updated '+new Date(mapData.at).toLocaleTimeString('en-CA',{hour:'2-digit',minute:'2-digit'});
-    const miss = []; if (!mapData.ok.now && mapMode==='now') miss.push('current flows'); if (!mapData.ok.fc && mapMode==='fc') miss.push('forecasts'); if (!mapData.ok.adv) miss.push('advisory areas');
+    const miss = []; if (!mapData.ok.now && mapMode==='now') miss.push('current flows'); if (!mapData.ok.fc && mapMode==='fc') miss.push('forecasts'); 
     $('mapMsg').hidden = !miss.length; $('mapMsg').textContent = miss.length ? 'Couldn’t load '+miss.join(' or ')+' just now.' : '';
   }
   async function openMap(){
@@ -1058,7 +992,7 @@ footer a{color:var(--accent)}
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
   // Visitor counting (optional): set this to your GoatCounter code, e.g. 'islandrivers', to switch it on.
-  const GOATCOUNTER_CODE = '';
+  const GOATCOUNTER_CODE = 'island-rivers';
   if (GOATCOUNTER_CODE && /^[a-z0-9-]+$/.test(GOATCOUNTER_CODE)) { const g = document.createElement('script'); g.async = true; g.src = 'https://gc.zgo.at/count.js'; g.dataset.goatcounter = 'https://'+GOATCOUNTER_CODE+'.goatcounter.com/count'; document.head.appendChild(g); }
 
   // start: link (#id) > first bookmark > last viewed > Englishman River
